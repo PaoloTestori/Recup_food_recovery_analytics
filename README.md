@@ -190,15 +190,15 @@ The dashboard uses **Plotly** for interactive visualizations.
 
 ## Dashboard Preview
 
-### Dashboard: Time series of food recover in a single market
+### Time series of food recover in a single market
 
 ![img_1.png](Dashboard/images/time_series_market.png)
 
-### Dashboard: Date filter
+### Date filter
 
 ![img_2.png](Dashboard/images/date_filter.png)
 
-### Dashboard: Total food recovered in single market filtered by month and breakdown by item
+###  Total food recovered in single market filtered by month and breakdown by item
 
 ![img_3.png](Dashboard/images/single_market_overview.png)
 
