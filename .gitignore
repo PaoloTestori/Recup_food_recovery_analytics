@@ -1,0 +1,10 @@
+.streamlit/
+Dashboard/appunto.txt
+pure-courier-478515-d0-0931aad2e11e.json
+script.py
+examples/MercatiMilano.csv
+dist/
+.venv/
+build/
+__pycache__/
+*.pyc

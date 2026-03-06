@@ -1,0 +1,425 @@
+import os
+import sys
+
+import gspread
+import plotly.express as px
+import pandas as pd
+from google.oauth2 import service_account
+from google.oauth2.service_account import Credentials
+import numpy as np
+import streamlit as st
+import plotly.graph_objects as go
+from sklearn.metrics import r2_score
+
+st.set_page_config(page_title="Homepage",
+                   page_icon="🍌",
+                   layout="wide")
+
+tab1, tab2 = st.tabs(["Mercati", "Totali"])
+
+st.markdown("""
+<style>
+button[data-baseweb="tab"] {
+    font-size: 16px;
+    padding: 10px 24px;
+    border-radius: 10px;
+    background-color: #1f1f1f;
+    color: #aaa;
+}
+
+button[data-baseweb="tab"]:hover {
+    background-color: #333;
+    color: white;
+}
+
+button[data-baseweb="tab"][aria-selected="true"] {
+    background: linear-gradient(90deg,#ff4b4b,#ff914d);
+    color: white;
+    font-weight: bold;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# Percorso del file JSON del service account
+
+creds = service_account.Credentials.from_service_account_info(
+    st.secrets["gcp_service_account"])
+
+
+# Apertura client
+client = gspread.authorize(creds)
+#lettura file mercati 2025
+wbUrl = st.secrets["WEBHOOK_URL_MERCATI2025"]
+
+st.set_page_config(layout="wide")
+
+df = pd.read_csv(
+    filepath_or_buffer= wbUrl,
+    header=0,
+    usecols=[0,1,2,3],
+    parse_dates=[0],
+    skiprows=[1],
+)
+#lettura file form google
+df_Form = pd.read_csv(
+    filepath_or_buffer= "https://docs.google.com/spreadsheets/d/1_8jwZKq6MOvS7pyqe5LROvJlE-G1UD1RaUPC0hkwaQ8/export?format=csv",
+    usecols=[0,1,2,3,5],
+    parse_dates=[1],
+    skiprows=[0],
+)
+
+df_Form["Data del Mercato"] = pd.to_datetime(df_Form["Data del Mercato"], dayfirst=True, errors="coerce")
+df_form_2025 = df_Form[df_Form["Data del Mercato"].dt.year == 2025]
+df_form_2025 = df_form_2025.reset_index(drop=True)
+#gestione numero volontari
+df_form_2025["Inserisci NOME e COGNOME dellə volontariə presenti"] = df_form_2025["Inserisci NOME e COGNOME dellə volontariə presenti"].str.replace(";", ",").str.replace(".", ",").str.replace("-",",").str.replace("/",",").str.replace(" e ",",")
+df_form_2025["Numero volontari"] = 0
+dizionarioVolontari = {}
+
+for idx, vol in df_form_2025["Inserisci NOME e COGNOME dellə volontariə presenti"].items():
+    if vol is "No Data":
+        continue
+    if "," in vol:
+        listaVolontari = str.split(vol,",")
+        listaVolontari = list(filter(None, listaVolontari))
+        numeroVolontari = int(len(listaVolontari))
+        dizionarioVolontari[str.upper(df_form_2025["Nome del Mercato"][idx]) + "_" + (df_form_2025["Data del Mercato"][idx].strftime("%d/%m/%Y"))] = numeroVolontari
+    else:
+        vol = vol.replace(" de "," de_").replace(" di "," di_").replace(" del "," del_").replace(" da "," da_").replace(" dal ","dal_").replace(" lo ","lo_").replace(" la ","la_")
+        listaVolontari = str.split(vol, " ")
+        listaVolontari = list(filter(None, listaVolontari))
+        numeroVolontari = int(len(listaVolontari)/2)
+        dizionarioVolontari[str.upper(df_form_2025["Nome del Mercato"][idx]) + "_" + (df_form_2025["Data del Mercato"][idx].strftime("%d/%m/%Y"))] = numeroVolontari
+
+idx = 0
+df["DATA"] = pd.to_datetime(df["DATA"],  format="mixed", dayfirst=True, errors="coerce")
+df["KG"] = df["KG"].str.replace(",", ".",regex=False).astype(float)
+df["Numero Volontari"] = 0
+for idx, row in df.iterrows():
+    df["Numero Volontari"][idx] = dizionarioVolontari[str.upper(df["MERCATO"][idx]) + "_" + df["DATA"][idx].strftime("%d/%m/%Y")]
+mercati_2025 = df.drop(columns=["DATA"]).groupby("MERCATO").sum()["KG"].reset_index()
+grafico_mercati_2025=go.Figure(data=[go.Pie(labels=mercati_2025["MERCATO"],values=mercati_2025["KG"],hole=0.3)])
+totali = mercati_2025.groupby("MERCATO")["KG"].sum()
+massimo_recupero = round(max(totali.values))
+massimo_mercato = totali.idxmax()
+
+with tab1:
+    total = round(float(df["KG"].sum()))
+    st.markdown(f"## 📅 Anno: 2025")
+    st.markdown("""
+                    <style>
+                    .kpi-card {
+                        background: #111;
+                        padding: 16px 20px;
+                        border-radius: 14px;
+                        text-align: center;
+                        box-shadow: 0 0 12px rgba(0,0,0,0.4);
+                    }
+                    .kpi-title {
+                        font-size: 16px;
+                        color: #bbbbbb;
+                    }
+                    .kpi-value {
+                        font-size: 22px;
+                        font-weight: 700;
+                        color: #00ff9c;
+                    }
+                    .kpi-icon {
+                        font-size: 22px;
+                    }
+                    </style>
+                    """, unsafe_allow_html=True)
+    col2, col3, col4 = st.columns(3)
+
+    with col2:
+        st.markdown(f"""
+                        <div class="kpi-card">
+                            <div class="kpi-icon">🌱</div>
+                            <div class="kpi-title">Totale recuperato nel 2025</div>
+                            <div class="kpi-value">{total} kg</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+    with col3:
+        st.markdown(f"""
+                        <div class="kpi-card">
+                            <div class="kpi-icon">🏆</div>
+                            <div class="kpi-title">Mercato con più recupero</div>
+                            <div class="kpi-value">{massimo_mercato}</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+
+    with col4:
+        st.markdown(f"""
+                        <div class="kpi-card">
+                            <div class="kpi-icon">🌱</div>
+                            <div class="kpi-title">Recupero massimo singolo mercato</div>
+                            <div class="kpi-value">{massimo_recupero} kg</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+    #st.markdown("<br><br>", unsafe_allow_html=True)
+    grafico_mercati_2025 = px.bar(
+        mercati_2025,
+        x="KG",
+        y=mercati_2025["MERCATO"][mercati_2025["MERCATO"].index],
+        orientation="h",
+        title="<b>📊 Recupero Mercati 2025</b>",
+        color_discrete_sequence=["#0083B8"] * len(mercati_2025),
+        template="plotly_white"
+    )
+    grafico_mercati_2025.update_layout(
+        plot_bgcolor="rgba(0,0,0,0)",
+        xaxis=(dict(showgrid=False)),
+        yaxis=dict(
+            categoryorder="total ascending",
+            tickmode="linear",
+            automargin=True
+        ),
+    title_font_size = 20,
+    title_x = 0.5,
+    title_xanchor = "center",
+    )
+    grafico_mercati_2025.add_trace(go.Scatter(
+        x=totali.values,
+        y=totali.index,
+        mode="text",
+        text=[f"{v:.0f} kg" for v in totali.values],
+        textposition="middle right",
+        showlegend=False
+    ))
+    st.plotly_chart(grafico_mercati_2025)
+
+with tab2:
+    df = df.replace(0, pd.NA)
+    df_raggruppato = df
+    df_raggruppato["SETTIMANA"] = df_raggruppato[
+        "DATA"].dt.to_period("W").dt.start_time
+    df_raggruppato = df_raggruppato.groupby(
+        "SETTIMANA").first().reset_index()
+    df_raggruppato = df_raggruppato.fillna(0)
+    df_raggruppato = df_raggruppato.drop(columns=["DATA"])
+    df["Settimana"] = 1
+    df["mese"] = ""
+    idx = 0
+    for idx, recupero in df.iterrows():
+        df["Settimana"][idx] = recupero["DATA"].isocalendar().week
+        df["mese"][idx] = recupero["DATA"].strftime("%B")
+    df_somma_mercati_2025 = df.drop(columns=["DATA"])
+    somma_mercati_2025 = (df_somma_mercati_2025.groupby(by=["SETTIMANA"]).sum())[["KG"]].reset_index()
+    fig = go.Figure()
+    df_media_mercati_2025 = ((df_somma_mercati_2025.groupby(["SETTIMANA", "MERCATO"])["KG"].sum().reset_index()).groupby("SETTIMANA")["KG"].mean()).reset_index()
+    df_std_mercati_2025 = ((df_somma_mercati_2025.groupby(["SETTIMANA", "MERCATO"])["KG"].sum().reset_index()).groupby("SETTIMANA")["KG"].std()).fillna(0).reset_index()
+    df_std_mercati_2025["Upper"] = df_media_mercati_2025["KG"] + df_std_mercati_2025["KG"]
+    df_std_mercati_2025["Lower"] = df_media_mercati_2025["KG"] - df_std_mercati_2025["KG"]
+    massimo_giorno_kili = round(max(somma_mercati_2025["KG"]), 1)
+    massimo_giorno = (somma_mercati_2025.loc[somma_mercati_2025['KG'].idxmax(), 'SETTIMANA']).strftime('%d/%m')
+    st.markdown(f"## 📅 Anno: 2025")
+    st.markdown("""
+                        <style>
+                        .kpi-card {
+                            background: #111;
+                            padding: 16px 20px;
+                            border-radius: 14px;
+                            text-align: center;
+                            box-shadow: 0 0 12px rgba(0,0,0,0.4);
+                        }
+                        .kpi-title {
+                            font-size: 20px;
+                            color: #bbbbbb;
+                        }
+                        .kpi-value {
+                            font-size: 26px;
+                            font-weight: 700;
+                            color: #00ff9c;
+                        }
+                        .kpi-icon {
+                            font-size: 26px;
+                        }
+                        </style>
+                        """, unsafe_allow_html=True)
+    col2, col3 = st.columns(2)
+
+    with col2:
+        st.markdown(f"""
+                            <div class="kpi-card">
+                                <div class="kpi-icon">📅 </div>
+                                <div class="kpi-title">Settimana record</div>
+                                <div class="kpi-value">{massimo_giorno}/2025</div>
+                            </div>
+                            """, unsafe_allow_html=True)
+    with col3:
+        st.markdown(f"""
+                            <div class="kpi-card">
+                                <div class="kpi-icon">🥇</div>
+                                <div class="kpi-title">Massimo recupero settimanale</div>
+                                <div class="kpi-value">{massimo_giorno_kili} kg</div>
+                            </div>
+                            """, unsafe_allow_html=True)
+    #st.markdown("<br><br>", unsafe_allow_html=True)
+
+    fig.add_trace(
+        go.Scatter(
+            x=somma_mercati_2025["SETTIMANA"],
+            y=somma_mercati_2025["KG"],
+            name="KG Recuperati",
+            mode="lines",
+            hovertext=f"KG - Recuperati",
+            hovertemplate="Data: %{x}<br>Kg recuperati: %{y}<extra></extra>"
+        )
+    )
+    fig.update_layout(
+        xaxis=dict(title="DATA"),
+        yaxis=dict(title="KG"),
+        legend=dict(orientation="h", y=-0.3),
+        title="♻️ Andamento del Recupero Totale",
+        title_font_size=20,
+        title_x=0.5,
+        title_xanchor="center",
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=df_std_mercati_2025["SETTIMANA"],
+        y=df_std_mercati_2025["Upper"],
+        mode="lines",
+        line=dict(color="rgba(0,100,255,0.6)", width=1),
+        showlegend=False
+    ))
+    fig.add_trace(go.Scatter(
+        x=df_std_mercati_2025["SETTIMANA"],
+        y=df_std_mercati_2025["Lower"],
+        mode="lines",
+        fill="tonexty",  # riempie fino alla trace sopra
+        fillcolor="rgba(0,100,255,0.35)",  # azzurro trasparente
+        line=dict(color="rgba(0,100,255,0.6)", width=1),
+        name="Deviazione std"
+    ))
+    fig.add_trace(
+        go.Scatter(
+            x=df_media_mercati_2025["SETTIMANA"],
+            y=df_media_mercati_2025["KG"],
+            name="Media Mercati",
+            mode="lines",
+            hovertext="Media Mercati",
+            hovertemplate="Data: %{x}<br>Kg medi: %{y}<extra></extra>",
+            line=dict(
+                dash="dot"
+            )
+        )
+    )
+    fig.update_layout(
+        xaxis=dict(title="DATA"),
+        yaxis=dict(title="KG"),
+        legend=dict(orientation="h", y=-0.3),
+        title = "🔄️ Andamento del Recupero Medio",
+        title_font_size = 20,
+        title_x = 0.5,
+        title_xanchor = "center",
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+    fig = go.Figure()
+    df_trend = somma_mercati_2025.set_index(
+        "SETTIMANA").rolling(4).mean().reset_index().dropna()
+    df_slope = df_trend.sort_values("SETTIMANA")
+    x = np.arange(len(df_slope.index))
+    y = df_slope["KG"].values
+    slope, intercept = np.polyfit(x, y, 1)
+    trend = slope * x + intercept
+    r2 = round(r2_score(y, trend), 2)
+    media = round(float(somma_mercati_2025.mean()["KG"]),2)
+    fig.add_trace(
+        go.Scatter(
+            x=df_trend["SETTIMANA"],
+            y=df_trend["KG"],
+            mode="lines",
+            hovertext=f"Media Mobile",
+            name=f"Media Mobile",
+            line=dict(
+                width=2,
+                color="rgb(255,209,102)",
+            ),
+            opacity=1
+        )
+    )
+    color = " rgb(60,179,113)" if slope > 0 else "rgb(230,57,70)"
+    fig.add_trace(
+        go.Scatter(
+            x=df_trend["SETTIMANA"],
+            y=trend,
+            mode="lines",
+            hovertext=f"Trend",
+            name=f"Trend",
+            line=dict(
+                dash="dash",
+                width=1,
+                color=color
+            )
+        )
+    )
+    fig.update_layout(
+        title="📈 Andamento del Recupero nel Tempo",
+        xaxis=dict(title="DATA"),
+        yaxis=dict(title="KG"),
+        legend=dict(orientation="h", y=-0.3),
+        title_x=0.5,
+        title_xanchor="center",
+        title_font_size=20,
+    )
+    color = "rgba(60,179,113,0.9)" if slope > 0 else "rgba(230,57,70,0.9)"
+    fig.add_annotation(
+        x=0.02,
+        y=0.95,
+        xref="paper",
+        yref="paper",
+        text=f"Trend: {slope * 5:+.0f} kg/settimana",
+        showarrow=False,
+        font=dict(size=16, color=color),
+    )
+    fig.add_annotation(
+        x=0.02,
+        y=0.86,
+        xref="paper",
+        yref="paper",
+        text=f"R² = {r2:.2f}",
+        showarrow=False,
+        font=dict(size=14, color="white"),
+        bgcolor="rgba(0,0,0,0.5)",
+        borderwidth=1
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+st.session_state["df_media_mercati_2025"] = df_media_mercati_2025
+
+with tab1:
+    mercati_2025["Lat"] = [45.48194631003896, 45.498572631276076, 45.41558818510914, 45.4568377251085, 45.43769947440869, 45.44079962417922, 45.46856674391473, 45.45809799201643, 45.44769247648455, 45.49170755334271, 45.47979583274876]
+    mercati_2025["Long"] = [9.20908871960476, 9.171843522528558, 9.265495707447384, 9.220735241820233, 9.222317497412892, 9.2194775512992, 9.141949360535436, 9.170071664509393, 9.18266244741002, 9.220097090233262, 9.236583212298052]
+    mercati_2025_bubble = mercati_2025
+    mercati_2025_bubble["DATA"] = somma_mercati_2025["SETTIMANA"]
+    mercati_2025_bubble_map = px.scatter_map(
+        mercati_2025_bubble,
+        lat="Lat",
+        lon="Long",
+        size="KG",
+        color="KG",
+        hover_name="MERCATO",
+        color_continuous_scale="Reds",
+        #animation_frame="DATA",
+        size_max=70,
+        zoom=11.7,
+    )
+    mercati_2025_bubble_map.update_layout(
+        map_style="carto-darkmatter",
+        margin={"r":0, "t":0, "l":0, "b":0},
+        title={
+            "text": "🍌 Mappa dei mercati Recup nella città di Milano",
+            "x": 0.5,
+            "xanchor": "center",
+            "yanchor": "top"
+        },
+        title_font=dict(size=18),
+    )
+
+    st.plotly_chart(mercati_2025_bubble_map, width="stretch")
+
+st.sidebar.text("Made with ❤ by Recup")
