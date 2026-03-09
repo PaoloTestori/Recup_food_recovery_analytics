@@ -18,13 +18,19 @@ and redistribution impact.
 
 ## Project details
 
-Recup volunteers collect unsold food from local markets and redistribute it freely to anyone who needs it.
-During each recovery session, volunteers record the recovered food and its weight using a **Google Form**.
+The project processes messy real-world data collected during food recovery activities. Recup volunteers collect unsold 
+food from local markets and redistribute it freely to anyone who needs it.
+During each recovery session, volunteers record the recovered food and its weight using a **Google Form**. Two fields 
+require significant cleaning: food recovered and volunteers involved
 The form responses are stored in a **Google Sheet**, where the recovered food is entered as **free text**, for example:
+**Food**
 ```
 Banane: 49.0, Cachi: 42.5, Pere: 25.9, Arance: 10.1, Mele: 3.5
 ```
-
+**Volunteers**
+```
+Andrea Capoccia  Giuli Salandin Lorenza Ferraro
+```
 Because the field is free text, entries can contain:
 * different separators (`: , ;`)
 * decimal formats (`25.9` or `25,9`)
@@ -38,18 +44,29 @@ that allows exploration of food recovery metrics.
 
 ---
 
-# Data pipeline architecture
+# Project architecture
 
 ```
 Google Form
-      ↓
-Google Sheets
-      ↓
-ETL pipeline (Python)
-      ↓
-Structured dataset
-      ↓
-Interactive dashboard (Streamlit)
+      │
+      ▼
+Google Sheets (raw data)
+      │
+      ▼
+ETL Pipeline (Python)
+  - extract
+  - transform
+  - load
+      │
+      ▼
+Clean structured dataset
+      │
+      ▼
+Streamlit Dashboard
+  - food recovered
+  - volunteers
+  - beneficiaries
+  
 ```
 
 The pipeline converts unstructured text into a structured dataset usable for analysis.
@@ -65,6 +82,24 @@ Example output structure:
 ---
 
 # Key challenges solved
+
+The project processes messy real-world data collected during food recovery activities.
+
+Two fields require significant cleaning:
+
+Food recovered:
+Volunteers involved
+
+Both are entered as free text in the Google Form and contain inconsistent separators,
+decimal formats, typos and duplicate entries.
+
+Examples of raw inputs:
+
+Banane: 49.0, Pere: 25,9; Arance 10 kg
+Andrea Capoccia  Giuli Salandin Lorenza Ferraro
+
+The ETL pipeline normalizes separators, extracts entities, aggregates duplicate
+entries and produces a structured dataset.
 
 The project focuses on **cleaning messy real-world data**.
 
@@ -201,6 +236,17 @@ The dashboard uses **Plotly** for interactive visualizations.
 ###  Total food recovered in single market filtered by month and breakdown by item
 
 ![img_3.png](Dashboard/images/single_market_overview.png)
+
+## Impact Metrics
+
+| Metric                  | Value    |
+|-------------------------|----------|
+| Total food recovered    | 65955 kg |
+| Total volunteers        | 60       |
+| Total beneficiaries     | 140      |
+| Number of recovery days | 157      |
+
+![timeseriesfoodrecover.png](Dashboard/images/timeseriesfoodrecover.png)
 
 ---
 # Technologies used:
