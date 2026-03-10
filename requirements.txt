@@ -4,5 +4,6 @@ streamlit
 plotly
 python-dateutil
 sklearn
-google.oauth
+service_account
 gspread
+r2_score
