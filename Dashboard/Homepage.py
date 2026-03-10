@@ -58,7 +58,7 @@ df = pd.read_csv(
 )
 #lettura file form google
 df_Form = pd.read_csv(
-    filepath_or_buffer= "https://docs.google.com/spreadsheets/d/1_8jwZKq6MOvS7pyqe5LROvJlE-G1UD1RaUPC0hkwaQ8/export?format=csv",
+    filepath_or_buffer= st.secrets["WEBHOOK_URL_MERCATI_RISPOSTE"],
     usecols=[0,1,2,3,5],
     parse_dates=[1],
     skiprows=[0],
