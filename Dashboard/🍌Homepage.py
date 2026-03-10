@@ -1,11 +1,7 @@
-import os
-import sys
-
 import gspread
 import plotly.express as px
 import pandas as pd
 from google.oauth2 import service_account
-from google.oauth2.service_account import Credentials
 import numpy as np
 import streamlit as st
 import plotly.graph_objects as go
