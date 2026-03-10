@@ -1,8 +1,0 @@
-pandas
-numpy
-streamlit
-plotly
-python-dateutil
-sklearn
-google.oauth
-gspread
