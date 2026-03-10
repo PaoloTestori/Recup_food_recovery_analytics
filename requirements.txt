@@ -1,9 +1,7 @@
+streamlit
 pandas
 numpy
-streamlit
 plotly
-python-dateutil
-sklearn
-service_account
 gspread
-r2_score
+google-auth
+scikit-learn
