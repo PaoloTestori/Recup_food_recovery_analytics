@@ -1,3 +1,5 @@
+import pandas as pd
+
 from src.food_parser import food_string_parser
 from datetime import datetime
 import re
@@ -57,4 +59,13 @@ def transform_food_data(tabellaMercati, tabellaReport):
     for genereCibo in tabellaMercati[2:]:
         genereCibo[3] = float(str(genereCibo[3]).replace(",", "."))
 
-    return tabellaMercati
+    df = pd.DataFrame(tabellaMercati,
+                      columns=['DATA', "MERCATO", "ITEM", "KG", "NUMERO VOLONTARI", "NUMERO BENEFICIARI"])
+    df = df.iloc[2:].reset_index(drop=True)
+    df['DATA'] = pd.to_datetime(df['DATA'], format='%d/%m/%Y', errors='coerce')
+    df = df.sort_values(['DATA', 'MERCATO'])
+    df['DATA'] = df['DATA'].dt.strftime('%d/%m/%Y')
+    df = pd.concat([df.iloc[:0], pd.DataFrame([[""] * len(df.columns)], columns=df.columns), df.iloc[0:]],
+                   ignore_index=True)
+
+    return df
