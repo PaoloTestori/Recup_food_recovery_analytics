@@ -11,7 +11,7 @@ st.set_page_config(page_title="Homepage",
                    page_icon="🍌",
                    layout="wide")
 
-tab1, tab2 = st.tabs(["Mercati", "Totali"])
+tab1, tab2 = st.tabs(["Mercati", "Andamenti"])
 
 st.markdown("""
 <style>
