@@ -7,6 +7,9 @@ import streamlit as st
 import plotly.graph_objects as go
 from sklearn.metrics import r2_score
 
+st.set_page_config(page_title="Homepage",
+                   page_icon="🍌",
+                   layout="wide")
 
 tab1, tab2 = st.tabs(["Mercati", "Andamenti"])
 
@@ -38,19 +41,28 @@ button[data-baseweb="tab"][aria-selected="true"] {
 creds = service_account.Credentials.from_service_account_info(
     st.secrets["gcp_service_account"])
 
+
 # Apertura client
-#client = gspread.authorize(creds)
+client = gspread.authorize(creds)
 #lettura file mercati 2025
-#wbUrl = st.secrets["WEBHOOK_URL_MERCATI2025"]
+wbUrl = st.secrets["WEBHOOK_URL_MERCATI2025"]
 
 st.set_page_config(layout="wide")
 
-#df = pd.read_csv(   filepath_or_buffer= wbUrl,header=0,usecols=[0,1,2,3],parse_dates=[0],skiprows=[1],)
+df = pd.read_csv(
+    filepath_or_buffer= wbUrl,
+    header=0,
+    usecols=[0,1,2,3],
+    parse_dates=[0],
+    skiprows=[1],
+)
 #lettura file form google
-#df_Form = pd.read_csv(    filepath_or_buffer= st.secrets["WEBHOOK_URL_MERCATI_RISPOSTE"],usecols=[0,1,2,3,5],    parse_dates=[1],    skiprows=[0],)
-df = st.session_state["df"].copy()
-df_Form = st.session_state["df_Form"].copy()
-dizionarioVolontari = st.session_state["dizionarioVolontari"].copy()
+df_Form = pd.read_csv(
+    filepath_or_buffer= st.secrets["WEBHOOK_URL_MERCATI_RISPOSTE"],
+    usecols=[0,1,2,3,5],
+    parse_dates=[1],
+    skiprows=[0],
+)
 
 df_Form["Data del Mercato"] = pd.to_datetime(df_Form["Data del Mercato"], dayfirst=True, errors="coerce")
 df_form_2025 = df_Form[df_Form["Data del Mercato"].dt.year == 2025]
@@ -58,28 +70,27 @@ df_form_2025 = df_form_2025.reset_index(drop=True)
 #gestione numero volontari
 df_form_2025["Inserisci NOME e COGNOME dellə volontariə presenti"] = df_form_2025["Inserisci NOME e COGNOME dellə volontariə presenti"].str.replace(";", ",").str.replace(".", ",").str.replace("-",",").str.replace("/",",").str.replace(" e ",",")
 df_form_2025["Numero volontari"] = 0
-#dizionarioVolontari = {}
-#for idx, vol in df_form_2025["Inserisci NOME e COGNOME dellə volontariə presenti"].items():
-#    if vol is "No Data":
-#        continue
-#    if "," in vol:
-#        listaVolontari = str.split(vol,",")
-#        listaVolontari = list(filter(None, listaVolontari))
-#        numeroVolontari = int(len(listaVolontari))
-#        dizionarioVolontari[str.upper(df_form_2025["Nome del Mercato"][idx]) + "_" + (df_form_2025["Data del Mercato"][idx].strftime("%d/%m/%Y"))] = numeroVolontari
-#    else:
-#        vol = vol.replace(" de "," de_").replace(" di "," di_").replace(" del "," del_").replace(" da "," da_").replace(" dal ","dal_").replace(" lo ","lo_").replace(" la ","la_")
-#        listaVolontari = str.split(vol, " ")
-#        listaVolontari = list(filter(None, listaVolontari))
-#        numeroVolontari = int(len(listaVolontari)/2)
- #       dizionarioVolontari[str.upper(df_form_2025["Nome del Mercato"][idx]) + "_" + (df_form_2025["Data del Mercato"][idx].strftime("%d/%m/%Y"))] = numeroVolontari
+dizionarioVolontari = {}
+
+for idx, vol in df_form_2025["Inserisci NOME e COGNOME dellə volontariə presenti"].items():
+    if vol is "No Data":
+        continue
+    if "," in vol:
+        listaVolontari = str.split(vol,",")
+        listaVolontari = list(filter(None, listaVolontari))
+        numeroVolontari = int(len(listaVolontari))
+        dizionarioVolontari[str.upper(df_form_2025["Nome del Mercato"][idx]) + "_" + (df_form_2025["Data del Mercato"][idx].strftime("%d/%m/%Y"))] = numeroVolontari
+    else:
+        vol = vol.replace(" de "," de_").replace(" di "," di_").replace(" del "," del_").replace(" da "," da_").replace(" dal ","dal_").replace(" lo ","lo_").replace(" la ","la_")
+        listaVolontari = str.split(vol, " ")
+        listaVolontari = list(filter(None, listaVolontari))
+        numeroVolontari = int(len(listaVolontari)/2)
+        dizionarioVolontari[str.upper(df_form_2025["Nome del Mercato"][idx]) + "_" + (df_form_2025["Data del Mercato"][idx].strftime("%d/%m/%Y"))] = numeroVolontari
 
 idx = 0
 df["DATA"] = pd.to_datetime(df["DATA"],  format="mixed", dayfirst=True, errors="coerce")
-#df["KG"] = df["KG"].str.replace(",", ".",regex=False).astype(float)
+df["KG"] = df["KG"].str.replace(",", ".",regex=False).astype(float)
 df["Numero Volontari"] = 0
-#dizionarioVolontari = {}
-
 for idx, row in df.iterrows():
     df["Numero Volontari"][idx] = dizionarioVolontari[str.upper(df["MERCATO"][idx]) + "_" + df["DATA"][idx].strftime("%d/%m/%Y")]
 mercati_2025 = df.drop(columns=["DATA"]).groupby("MERCATO").sum()["KG"].reset_index()
