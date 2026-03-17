@@ -44,8 +44,9 @@ creds = service_account.Credentials.from_service_account_info(
 
 # Apertura client
 client = gspread.authorize(creds)
-#lettura file mercati 2025
+#lettura file mercati 2025/2026
 wbUrl = st.secrets["WEBHOOK_URL_MERCATI2025"]
+wbUrl2026 = st.secrets["WEBHOOK_URL_MERCATI2026"]
 
 st.set_page_config(layout="wide")
 
@@ -53,6 +54,13 @@ df = pd.read_csv(
     filepath_or_buffer= wbUrl,
     header=0,
     usecols=[0,1,2,3],
+    parse_dates=[0],
+    skiprows=[1],
+)
+df_2026 = pd.read_csv(
+    filepath_or_buffer= wbUrl2026,
+    header=0,
+    usecols=[0,1,2,3,4,5],
     parse_dates=[0],
     skiprows=[1],
 )
@@ -64,13 +72,28 @@ df_Form = pd.read_csv(
     skiprows=[0],
 )
 
+df = pd.concat([df, df_2026], ignore_index=True)
+
+df["KG"] = (
+    df["KG"]
+    .astype(str)
+    .str.replace(",", ".", regex=False)
+)
+df["KG"] = pd.to_numeric(df["KG"], errors="coerce")
+
+
+st.session_state["df_Form"] = df_Form
+
+dizionarioVolontari = {}
+for row2026 in df_2026.iterrows():
+    dizionarioVolontari[row2026[1]["MERCATO"] + "_" + row2026[1]["DATA"]] = int(row2026[1]["NUMERO VOLONTARI"])
+
 df_Form["Data del Mercato"] = pd.to_datetime(df_Form["Data del Mercato"], dayfirst=True, errors="coerce")
 df_form_2025 = df_Form[df_Form["Data del Mercato"].dt.year == 2025]
 df_form_2025 = df_form_2025.reset_index(drop=True)
 #gestione numero volontari
 df_form_2025["Inserisci NOME e COGNOME dellə volontariə presenti"] = df_form_2025["Inserisci NOME e COGNOME dellə volontariə presenti"].str.replace(";", ",").str.replace(".", ",").str.replace("-",",").str.replace("/",",").str.replace(" e ",",")
 df_form_2025["Numero volontari"] = 0
-dizionarioVolontari = {}
 
 for idx, vol in df_form_2025["Inserisci NOME e COGNOME dellə volontariə presenti"].items():
     if vol is "No Data":
@@ -87,12 +110,15 @@ for idx, vol in df_form_2025["Inserisci NOME e COGNOME dellə volontariə presen
         numeroVolontari = int(len(listaVolontari)/2)
         dizionarioVolontari[str.upper(df_form_2025["Nome del Mercato"][idx]) + "_" + (df_form_2025["Data del Mercato"][idx].strftime("%d/%m/%Y"))] = numeroVolontari
 
+st.session_state["dizionarioVolontari"] = dizionarioVolontari
 idx = 0
 df["DATA"] = pd.to_datetime(df["DATA"],  format="mixed", dayfirst=True, errors="coerce")
-df["KG"] = df["KG"].str.replace(",", ".",regex=False).astype(float)
-df["Numero Volontari"] = 0
+#df["KG"] = df["KG"].str.replace(",", ".",regex=False).astype(float)
+#df["Numero Volontari"] = 0
 for idx, row in df.iterrows():
-    df["Numero Volontari"][idx] = dizionarioVolontari[str.upper(df["MERCATO"][idx]) + "_" + df["DATA"][idx].strftime("%d/%m/%Y")]
+    df["NUMERO VOLONTARI"][idx] = dizionarioVolontari[str.upper(df["MERCATO"][idx]) + "_" + df["DATA"][idx].strftime("%d/%m/%Y")]
+st.session_state["df"] = df
+
 mercati_2025 = df.drop(columns=["DATA"]).groupby("MERCATO").sum()["KG"].reset_index()
 grafico_mercati_2025=go.Figure(data=[go.Pie(labels=mercati_2025["MERCATO"],values=mercati_2025["KG"],hole=0.3)])
 totali = mercati_2025.groupby("MERCATO")["KG"].sum()
