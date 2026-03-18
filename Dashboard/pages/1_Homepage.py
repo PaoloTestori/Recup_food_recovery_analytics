@@ -11,8 +11,6 @@ st.set_page_config(page_title="Homepage",
                    page_icon="🍌",
                    layout="wide")
 
-tab1, tab2 = st.tabs(["Mercati", "Andamenti"])
-
 mesario = [
     "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
     "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"
@@ -138,84 +136,89 @@ mercati_anni = df.groupby('ANNO')['KG'].sum().reset_index()
 mercati_anni["ANNO"] = mercati_anni["ANNO"].astype(str)
 totali = mercati_anni.groupby("ANNO")["KG"].sum()
 
+total = round(float(df["KG"].sum()))
+#st.markdown(f"## 📅 Anno: 2025")
+st.markdown("""
+                <style>
+                .kpi-card {
+                    background: #111;
+                    padding: 2px 2px;
+                    border-radius: 14px;
+                    text-align: center;
+                    box-shadow: 0 0 12px rgba(0,0,0,0.4);
+                }
+                .kpi-title {
+                    font-size: 36px;
+                    color: #bbbbbb;
+                }
+                .kpi-value {
+                    font-size: 36px;
+                    font-weight: 700;
+                    color: #00ff9c;
+                }
+                .kpi-icon {
+                    font-size: 36px;
+                }
+                </style>
+                """, unsafe_allow_html=True)
+col2 = st.columns(1)
 
-with tab1:
-    total = round(float(df["KG"].sum()))
-    #st.markdown(f"## 📅 Anno: 2025")
-    st.markdown("""
-                    <style>
-                    .kpi-card {
-                        background: #111;
-                        padding: 16px 20px;
-                        border-radius: 14px;
-                        text-align: center;
-                        box-shadow: 0 0 12px rgba(0,0,0,0.4);
-                    }
-                    .kpi-title {
-                        font-size: 16px;
-                        color: #bbbbbb;
-                    }
-                    .kpi-value {
-                        font-size: 22px;
-                        font-weight: 700;
-                        color: #00ff9c;
-                    }
-                    .kpi-icon {
-                        font-size: 22px;
-                    }
-                    </style>
+
+st.markdown(f"""
+                    <div class="kpi-card">
+                        <div class="kpi-icon">🌱</div>
+                        <div class="kpi-title">Cibo recuperato dal 2025</div>
+                        <div class="kpi-value">{total} kg</div>
+                    </div>
                     """, unsafe_allow_html=True)
-    col2 = st.columns(1)
 
+st.markdown("<br><br>", unsafe_allow_html=True)
+grafico_mercati_anni = px.bar(
+    mercati_anni,
+    x="ANNO",
+    y="KG",
+    orientation="v",
+    color_discrete_sequence=["#0083B8"],
+    template="plotly_white"
+)
+grafico_mercati_anni.update_layout(
+    xaxis=dict(title="ANNO"),
+    yaxis=dict(title="KG"),
+    legend=dict(orientation="h", y=-0.3),
+    title="♻️ Recupero negli anni",
+    title_font_size=20,
+    title_x=0.5,
+    title_xanchor="center",
+)
+grafico_mercati_anni.update_traces(
+    width=0.4,
+    texttemplate='%{y:.0f} Kg',
+    textposition='outside'
+)
+grafico_mercati_anni.update_layout(
+    yaxis=dict(range=[0, mercati_anni["KG"].max() * 1.2]),
+    bargap=0.5
+)
 
-    st.markdown(f"""
-                        <div class="kpi-card">
-                            <div class="kpi-icon">🌱</div>
-                            <div class="kpi-title">Cibo recuperato dal 2025</div>
-                            <div class="kpi-value">{total} kg</div>
-                        </div>
-                        """, unsafe_allow_html=True)
-
-    #st.markdown("<br><br>", unsafe_allow_html=True)
-    grafico_mercati_anni = px.bar(
-        mercati_anni,
-        x="ANNO",
-        y="KG",
-        orientation="v",
-        title="<b>📊 Recupero Mercati 2025</b>",
-        color_discrete_sequence=["#0083B8"],
-        template="plotly_white"
-    )
-    grafico_mercati_anni.update_layout(
-        xaxis=dict(title="ANNO"),
-        yaxis=dict(title="KG"),
-        legend=dict(orientation="h", y=-0.3),
-        title="♻️ Recupero negli anni",
-        title_font_size=20,
-        title_x=0.5,
-        title_xanchor="center",
-    )
-    grafico_mercati_anni.update_traces(
-        width=0.4,
-        texttemplate='%{y:.0f} Kg',
-        textposition='outside'
-    )
-    grafico_mercati_anni.update_layout(
-        yaxis=dict(range=[0, mercati_anni["KG"].max() * 1.2]),
-        bargap=0.5
-    )
-
-    grafico_confronto_anni = px.line(
-        df_grafico_confronto_anni,
-        x="MESE",
-        y="KG",
-        color="ANNO",
-        title="Confronto 2025 vs 2026 (stesso periodo)",
-        labels={"giorno": "Giorno dell'anno"},
-        template="plotly_dark"
-    )
-
-    st.plotly_chart(grafico_mercati_anni, use_container_width=True)
-    st.plotly_chart(grafico_confronto_anni, use_container_width=True)
+grafico_confronto_anni = px.line(
+    df_grafico_confronto_anni,
+    x="MESE",
+    y="KG",
+    color="ANNO",
+    title="Confronto Anni",
+    labels={"giorno": "Giorno dell'anno"},
+    template="plotly_dark"
+)
+grafico_confronto_anni.update_layout(
+    xaxis=dict(title="MESE"),
+    yaxis=dict(title="KG"),
+    legend=dict(orientation="h", y=-0.3),
+    title="⚖️Confronto Anni",
+    title_font_size=20,
+    title_x=0.5,
+    title_xanchor="center",
+)
+st.plotly_chart(grafico_mercati_anni, use_container_width=True)
+st.plotly_chart(grafico_confronto_anni, use_container_width=True)
 
 

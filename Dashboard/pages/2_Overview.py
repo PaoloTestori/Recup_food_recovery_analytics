@@ -6,9 +6,36 @@ import numpy as np
 import streamlit as st
 import plotly.graph_objects as go
 from sklearn.metrics import r2_score
+#importo components
+import importlib.util
+import os
+
+from Dashboard.components.filters import render_filter_anno, get_filter_anno
+
+spec = importlib.util.spec_from_file_location(
+    "filters",
+    os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'components', 'filters.py'))
+)
+filters = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(filters)
+render_filter_anno = filters.render_filter_anno
+get_filter_anno = filters.get_filter_anno
+
+#importo utils\Anno.py
+spec = importlib.util.spec_from_file_location(
+    "Data",
+    os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'utils', 'Anno.py'))
+)
+Data = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(Data)
+filtra_df = Data.filtra_df
+
+
 
 
 tab1, tab2 = st.tabs(["Mercati", "Andamenti"])
+
+st.sidebar.text("Made with ❤ by Recup")
 
 st.markdown("""
 <style>
@@ -33,24 +60,16 @@ button[data-baseweb="tab"][aria-selected="true"] {
 </style>
 """, unsafe_allow_html=True)
 
-# Percorso del file JSON del service account
-
-creds = service_account.Credentials.from_service_account_info(
-    st.secrets["gcp_service_account"])
-
-# Apertura client
-#client = gspread.authorize(creds)
-#lettura file mercati 2025
-#wbUrl = st.secrets["WEBHOOK_URL_MERCATI2025"]
-
 st.set_page_config(layout="wide")
-
-#df = pd.read_csv(   filepath_or_buffer= wbUrl,header=0,usecols=[0,1,2,3],parse_dates=[0],skiprows=[1],)
-#lettura file form google
-#df_Form = pd.read_csv(    filepath_or_buffer= st.secrets["WEBHOOK_URL_MERCATI_RISPOSTE"],usecols=[0,1,2,3,5],    parse_dates=[1],    skiprows=[0],)
 df = st.session_state["df"].copy()
+anni_disponibili = df["ANNO"].unique().astype(int).tolist()
 df_Form = st.session_state["df_Form"].copy()
 dizionarioVolontari = st.session_state["dizionarioVolontari"].copy()
+#filtri
+render_filter_anno(anni_disponibili)
+filtroAnno = get_filter_anno()
+df = filtra_df(df, filtroAnno)
+Anno = str(filtroAnno["ANNO"])
 
 df_Form["Data del Mercato"] = pd.to_datetime(df_Form["Data del Mercato"], dayfirst=True, errors="coerce")
 df_form_2025 = df_Form[df_Form["Data del Mercato"].dt.year == 2025]
@@ -91,7 +110,7 @@ massimo_mercato = totali.idxmax()
 
 with tab1:
     total = round(float(df["KG"].sum()))
-    st.markdown(f"## 📅 Anno: 2025")
+    st.markdown(f"## 📅 Anno: {Anno}")
     st.markdown("""
                     <style>
                     .kpi-card {
@@ -121,7 +140,7 @@ with tab1:
         st.markdown(f"""
                         <div class="kpi-card">
                             <div class="kpi-icon">🌱</div>
-                            <div class="kpi-title">Totale recuperato nel 2025</div>
+                            <div class="kpi-title">Totale recuperato nel {Anno}</div>
                             <div class="kpi-value">{total} kg</div>
                         </div>
                         """, unsafe_allow_html=True)
@@ -148,7 +167,7 @@ with tab1:
         x="KG",
         y=mercati_2025["MERCATO"][mercati_2025["MERCATO"].index],
         orientation="h",
-        title="<b>📊 Recupero Mercati 2025</b>",
+        title=f"<b>📊 Recupero Mercati {Anno}</b>",
         color_discrete_sequence=["#0083B8"] * len(mercati_2025),
         template="plotly_white"
     )
@@ -181,15 +200,18 @@ with tab2:
         "DATA"].dt.to_period("W").dt.start_time
     df_raggruppato = df_raggruppato.groupby(
         "SETTIMANA").first().reset_index()
+    df_raggruppato = df_raggruppato.apply(
+        lambda col: col.astype(col.cat.categories.dtype) if hasattr(col, 'cat') else col
+    )
     df_raggruppato = df_raggruppato.fillna(0)
-    df_raggruppato = df_raggruppato.drop(columns=["DATA"])
+    df_raggruppato = df_raggruppato.drop(columns=["DATA", "MESE", "ANNO"])
     df["Settimana"] = 1
     df["mese"] = ""
     idx = 0
     for idx, recupero in df.iterrows():
         df["Settimana"][idx] = recupero["DATA"].isocalendar().week
         df["mese"][idx] = recupero["DATA"].strftime("%B")
-    df_somma_mercati_2025 = df.drop(columns=["DATA"])
+    df_somma_mercati_2025 = df.drop(columns=["DATA", "MESE", "ANNO"])
     somma_mercati_2025 = (df_somma_mercati_2025.groupby(by=["SETTIMANA"]).sum())[["KG"]].reset_index()
     fig = go.Figure()
     df_media_mercati_2025 = ((df_somma_mercati_2025.groupby(["SETTIMANA", "MERCATO"])["KG"].sum().reset_index()).groupby("SETTIMANA")["KG"].mean()).reset_index()
@@ -198,7 +220,7 @@ with tab2:
     df_std_mercati_2025["Lower"] = df_media_mercati_2025["KG"] - df_std_mercati_2025["KG"]
     massimo_giorno_kili = round(max(somma_mercati_2025["KG"]), 1)
     massimo_giorno = (somma_mercati_2025.loc[somma_mercati_2025['KG'].idxmax(), 'SETTIMANA']).strftime('%d/%m')
-    st.markdown(f"## 📅 Anno: 2025")
+    st.markdown(f"## 📅 Anno: {Anno}")
     st.markdown("""
                         <style>
                         .kpi-card {
@@ -229,7 +251,7 @@ with tab2:
                             <div class="kpi-card">
                                 <div class="kpi-icon">📅 </div>
                                 <div class="kpi-title">Settimana record</div>
-                                <div class="kpi-value">{massimo_giorno}/2025</div>
+                                <div class="kpi-value">{massimo_giorno}/{Anno}</div>
                             </div>
                             """, unsafe_allow_html=True)
     with col3:
@@ -408,4 +430,3 @@ with tab1:
 
     st.plotly_chart(mercati_2025_bubble_map, width="stretch")
 
-st.sidebar.text("Made with ❤ by Recup")
