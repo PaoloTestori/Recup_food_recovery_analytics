@@ -82,7 +82,8 @@ df["Numero Volontari"] = 0
 
 for idx, row in df.iterrows():
     df["Numero Volontari"][idx] = dizionarioVolontari[str.upper(df["MERCATO"][idx]) + "_" + df["DATA"][idx].strftime("%d/%m/%Y")]
-mercati_2025 = df.drop(columns=["DATA"]).groupby("MERCATO").sum()["KG"].reset_index()
+
+mercati_2025 = df.drop(columns=["DATA", "MESE", "ANNO"]).groupby("MERCATO").sum()["KG"].reset_index()
 grafico_mercati_2025=go.Figure(data=[go.Pie(labels=mercati_2025["MERCATO"],values=mercati_2025["KG"],hole=0.3)])
 totali = mercati_2025.groupby("MERCATO")["KG"].sum()
 massimo_recupero = round(max(totali.values))
