@@ -192,7 +192,7 @@ df_selection_altro = df_selection.copy()
 df_selection_altro.loc[df_selection_altro["KG"] < 2, "ITEM"] = "Altro"
 df_grafico_mercato_selezionato_alimenti = df_selection_altro.drop(columns=["DATA"])
 df_grafico_mercato_selezionato_alimenti = (
-    df_grafico_mercato_selezionato_alimenti.groupby(by=["MERCATO", "ITEM"])
+    df_grafico_mercato_selezionato_alimenti.drop(columns=["MESE", "ANNO"]).groupby(by=["MERCATO", "ITEM"])
     .sum()[["KG"]]
     .reset_index()
     .fillna(0)
@@ -291,7 +291,7 @@ else:
         #st.markdown("<br><br>", unsafe_allow_html=True)
         df_grafico_mercato_selezionato_alimenti = df_selection_altro.drop(columns=["DATA"])
         df_grafico_mercato_selezionato_alimenti = (
-            df_grafico_mercato_selezionato_alimenti.groupby(by=["MERCATO", "ITEM"])
+            df_grafico_mercato_selezionato_alimenti.drop(columns=["MESE", "ANNO"]).groupby(by=["MERCATO", "ITEM"])
             .sum()[["KG"]]
             .reset_index()
             .fillna(0)
@@ -436,7 +436,7 @@ with tabfocusalimentigiornate:
         totale_giorno_mercato_corrente = round(tabella_mercato["KG"].sum(), 1)
         data_mercato_corrente = tabella_mercato["DATA"].iloc[0].strftime("%d/%m/%Y")
         chiave = merc  + "_" + data_mercato_corrente
-        tabella_mercato = (tabella_mercato.drop(columns=["DATA"])).groupby("ITEM").sum()[["KG"]].reset_index()
+        tabella_mercato = (tabella_mercato.drop(columns=["DATA", "MESE", "ANNO"])).groupby("ITEM").sum()[["KG"]].reset_index()
         alimento_pi_recuperato = tabella_mercato["ITEM"].iloc[tabella_mercato["KG"].idxmax()]
         st.markdown("""
                 <style>
