@@ -1,5 +1,6 @@
 import streamlit as st
 
+
 pages = [
     st.Page("pages/1_Homepage.py", title="Homepage", icon="🍌"),
     st.Page("pages/2_Overview.py", title="Overview", icon="🍲"),
