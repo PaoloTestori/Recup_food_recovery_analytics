@@ -89,8 +89,10 @@ st.sidebar.text("Made with ❤ by Recup")
 st.session_state["df_Form"] = df_Form
 
 dizionarioVolontari = {}
+dizionarioBeneficiari = {}
 for row2026 in df_2026.iterrows():
     dizionarioVolontari[row2026[1]["MERCATO"] + "_" + row2026[1]["DATA"]] = int(row2026[1]["NUMERO VOLONTARI"])
+    dizionarioBeneficiari[row2026[1]["MERCATO"] + "_" + row2026[1]["DATA"]] = int(row2026[1]["NUMERO BENEFICIARI"])
 
 df_Form["Data del Mercato"] = pd.to_datetime(df_Form["Data del Mercato"], dayfirst=True, errors="coerce")
 df_form_2025 = df_Form[df_Form["Data del Mercato"].dt.year == 2025]
@@ -114,7 +116,14 @@ for idx, vol in df_form_2025["Inserisci NOME e COGNOME dellə volontariə presen
         numeroVolontari = int(len(listaVolontari)/2)
         dizionarioVolontari[str.upper(df_form_2025["Nome del Mercato"][idx]) + "_" + (df_form_2025["Data del Mercato"][idx].strftime("%d/%m/%Y"))] = numeroVolontari
 
+for idx, ben in df_form_2025["Quantə beneficiariə? (inserisci un numero)"].items():
+    if ben is "" or ben is "-":
+        continue
+    dizionarioBeneficiari[str.upper(df_form_2025["Nome del Mercato"][idx]) + "_" + (
+        df_form_2025["Data del Mercato"][idx].strftime("%d/%m/%Y"))] = int(df_form_2025["Quantə beneficiariə? (inserisci un numero)"][idx])
+
 st.session_state["dizionarioVolontari"] = dizionarioVolontari
+st.session_state["dizionarioBeneficiari"] = dizionarioBeneficiari
 idx = 0
 df["DATA"] = pd.to_datetime(df["DATA"],  format="mixed", dayfirst=True, errors="coerce")
 #df["KG"] = df["KG"].str.replace(",", ".",regex=False).astype(float)

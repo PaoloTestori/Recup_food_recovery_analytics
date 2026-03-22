@@ -10,8 +10,6 @@ from sklearn.metrics import r2_score
 import importlib.util
 import os
 
-from Dashboard.components.filters import render_filter_anno, get_filter_anno
-
 spec = importlib.util.spec_from_file_location(
     "filters",
     os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'components', 'filters.py'))
@@ -21,21 +19,18 @@ spec.loader.exec_module(filters)
 render_filter_anno = filters.render_filter_anno
 get_filter_anno = filters.get_filter_anno
 
-#importo utils\Anno.py
+#importo utils\filtro_anno.py
 spec = importlib.util.spec_from_file_location(
-    "Data",
-    os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'utils', 'Anno.py'))
+    "Anno",
+    os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'utils', 'filtro_anno.py'))
 )
-Data = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(Data)
-filtra_df = Data.filtra_df
-
-
+Anno = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(Anno)
+filtra_df = Anno.filtra_df
 
 
 tab1, tab2 = st.tabs(["Mercati", "Andamenti"])
 
-st.sidebar.text("Made with ❤ by Recup")
 
 st.markdown("""
 <style>
@@ -69,7 +64,10 @@ dizionarioVolontari = st.session_state["dizionarioVolontari"].copy()
 render_filter_anno(anni_disponibili)
 filtroAnno = get_filter_anno()
 df = filtra_df(df, filtroAnno)
-Anno = str(filtroAnno["ANNO"])
+Anno_selezionato = str(filtroAnno["ANNO"])
+st.session_state["Anno_selezionato"] = Anno_selezionato
+
+st.sidebar.text("Made with ❤ by Recup")
 
 df_Form["Data del Mercato"] = pd.to_datetime(df_Form["Data del Mercato"], dayfirst=True, errors="coerce")
 df_form_2025 = df_Form[df_Form["Data del Mercato"].dt.year == 2025]
@@ -110,7 +108,7 @@ massimo_mercato = totali.idxmax()
 
 with tab1:
     total = round(float(df["KG"].sum()))
-    st.markdown(f"## 📅 Anno: {Anno}")
+    st.markdown(f"## 📅 Anno: {Anno_selezionato}")
     st.markdown("""
                     <style>
                     .kpi-card {
@@ -140,7 +138,7 @@ with tab1:
         st.markdown(f"""
                         <div class="kpi-card">
                             <div class="kpi-icon">🌱</div>
-                            <div class="kpi-title">Totale recuperato nel {Anno}</div>
+                            <div class="kpi-title">Totale recuperato nel {Anno_selezionato}</div>
                             <div class="kpi-value">{total} kg</div>
                         </div>
                         """, unsafe_allow_html=True)
@@ -167,7 +165,7 @@ with tab1:
         x="KG",
         y=mercati_2025["MERCATO"][mercati_2025["MERCATO"].index],
         orientation="h",
-        title=f"<b>📊 Recupero Mercati {Anno}</b>",
+        title=f"<b>📊 Recupero Mercati {Anno_selezionato}</b>",
         color_discrete_sequence=["#0083B8"] * len(mercati_2025),
         template="plotly_white"
     )
@@ -220,7 +218,7 @@ with tab2:
     df_std_mercati_2025["Lower"] = df_media_mercati_2025["KG"] - df_std_mercati_2025["KG"]
     massimo_giorno_kili = round(max(somma_mercati_2025["KG"]), 1)
     massimo_giorno = (somma_mercati_2025.loc[somma_mercati_2025['KG'].idxmax(), 'SETTIMANA']).strftime('%d/%m')
-    st.markdown(f"## 📅 Anno: {Anno}")
+    st.markdown(f"## 📅 Anno: {Anno_selezionato}")
     st.markdown("""
                         <style>
                         .kpi-card {
@@ -251,7 +249,7 @@ with tab2:
                             <div class="kpi-card">
                                 <div class="kpi-icon">📅 </div>
                                 <div class="kpi-title">Settimana record</div>
-                                <div class="kpi-value">{massimo_giorno}/{Anno}</div>
+                                <div class="kpi-value">{massimo_giorno}/{Anno_selezionato}</div>
                             </div>
                             """, unsafe_allow_html=True)
     with col3:
