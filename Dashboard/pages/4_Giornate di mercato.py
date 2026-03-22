@@ -4,10 +4,73 @@ import plotly.express as px
 import pandas as pd
 import streamlit as st
 import plotly.graph_objects as go
+import importlib.util
+import os
+
+spec = importlib.util.spec_from_file_location(
+    "filters",
+    os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'components', 'filters.py'))
+)
+filters = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(filters)
+render_filter_anno = filters.render_filter_anno
+get_filter_anno = filters.get_filter_anno
+render_filter_mese = filters.render_filter_mese
+get_filter_mese = filters.get_filter_mese
+render_filter_data = filters.render_filter_data
+get_filter_giorni = filters.get_filter_giorni
+
+#importo utils\filtri
+spec = importlib.util.spec_from_file_location(
+    "Anno",
+    os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'utils', 'filtro_anno.py'))
+)
+Anno = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(Anno)
+filtra_df_anno = Anno.filtra_df
+spec = importlib.util.spec_from_file_location(
+    "Mese",
+    os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'utils', 'filtro_mese.py'))
+)
+Mese = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(Mese)
+filtra_df_mese = Mese.filtra_df
+spec = importlib.util.spec_from_file_location(
+    "Giorno",
+    os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'utils', 'filtro_giorno.py'))
+)
+Giorno = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(Giorno)
+filtra_df_giorno = Giorno.filtra_df
 
 st.set_page_config(page_title="Giornate di mercato",
                    page_icon="📅",
                    layout="wide")
+
+df = st.session_state["df"].copy()
+anni_disponibili = df["ANNO"].unique().astype(int).tolist()
+df_Form = st.session_state["df_Form"].copy()
+dizionarioVolontari = st.session_state["dizionarioVolontari"].copy()
+dizionarioBeneficiari = st.session_state["dizionarioBeneficiari"].copy()
+
+Anno_selezionato = st.session_state["Anno_selezionato"]
+#filtri
+render_filter_anno(anni_disponibili)
+filtroAnno = get_filter_anno()
+df = filtra_df_anno(df, filtroAnno)
+st.session_state["Anno_selezionato"] = Anno_selezionato
+render_filter_mese()
+filtroMese = get_filter_mese()
+df = filtra_df_mese(df, filtroMese)
+df["DATA ESTESA"] = df["DATA"].dt.strftime('%d/%m/%Y')
+df["DATA"]= df["DATA"].dt.day
+date_disponibili = list(dict.fromkeys(df["DATA"].tolist()))
+#st.write(date_disponibili)
+date_selezionate = render_filter_data(date_disponibili)
+#st.write(date_selezionate)
+filtroGiorni = get_filter_giorni()
+df = filtra_df_giorno(df, filtroGiorni)
+
 
 tabconfrontomercatigiornate, tabfocusalimentigiornate = st.tabs(["Focus Totali", "Focus Mercati"])
 
@@ -71,24 +134,21 @@ emoji_alimenti = {
 #df = pd.read_csv(    filepath_or_buffer= wbUrl,    header=0,    usecols=[0,1,2,3],    parse_dates=[0],    skiprows=[1],)
 #lettura file form google
 #df_Form = pd.read_csv(    filepath_or_buffer= st.secrets["WEBHOOK_URL_MERCATI_RISPOSTE"],    usecols=[0,1,2,3,5,6],    parse_dates=[1],    skiprows=[0],)
-df = st.session_state["df"].copy()
-df_Form = st.session_state["df_Form"].copy()
-dizionarioVolontari = st.session_state["dizionarioVolontari"].copy()
 
 df_Form["Data del Mercato"] = pd.to_datetime(df_Form["Data del Mercato"], dayfirst=True, errors="coerce")
 df_form_2025 = df_Form[df_Form["Data del Mercato"].dt.year == 2025]
 df_form_2025 = df_form_2025.reset_index(drop=True)
 #gestione numero volontari
-df_form_2025["Inserisci NOME e COGNOME dellə volontariə presenti"] = df_form_2025["Inserisci NOME e COGNOME dellə volontariə presenti"].str.replace(";", ",").str.replace(".", ",").str.replace("-",",").str.replace("/",",").str.replace(" e ",",")
-df_form_2025["Numero volontari"] = 0
-df_form_2025["Quantə beneficiariə? (inserisci un numero)"] = df_form_2025["Quantə beneficiariə? (inserisci un numero)"].replace("-",0)
-dizionarioBeneficiari = {}
+#df_form_2025["Inserisci NOME e COGNOME dellə volontariə presenti"] = df_form_2025["Inserisci NOME e COGNOME dellə volontariə presenti"].str.replace(";", ",").str.replace(".", ",").str.replace("-",",").str.replace("/",",").str.replace(" e ",",")
+#df_form_2025["Numero volontari"] = 0
+#df_form_2025["Quantə beneficiariə? (inserisci un numero)"] = df_form_2025["Quantə beneficiariə? (inserisci un numero)"].replace("-",0)
+#dizionarioBeneficiari = {}
 
-for idx, ben in df_form_2025["Quantə beneficiariə? (inserisci un numero)"].items():
-    if ben is "":
-        continue
-    dizionarioBeneficiari[str.upper(df_form_2025["Nome del Mercato"][idx]) + "_" + (
-        df_form_2025["Data del Mercato"][idx].strftime("%d/%m/%Y"))] = int(df_form_2025["Quantə beneficiariə? (inserisci un numero)"][idx])
+#for idx, ben in df_form_2025["Quantə beneficiariə? (inserisci un numero)"].items():
+#    if ben is "":
+#        continue
+#    dizionarioBeneficiari[str.upper(df_form_2025["Nome del Mercato"][idx]) + "_" + (
+#        df_form_2025["Data del Mercato"][idx].strftime("%d/%m/%Y"))] = int(df_form_2025["Quantə beneficiariə? (inserisci un numero)"][idx])
 
 #for idx, vol in df_form_2025["Inserisci NOME e COGNOME dellə volontariə presenti"].items():
 #    if vol is "No Data":
@@ -113,61 +173,38 @@ df["DATA"] = pd.to_datetime(df["DATA"],  format="mixed", dayfirst=True, errors="
 #    df["Numero Volontari"][idx] = dizionarioVolontari[str.upper(df["MERCATO"][idx]) + "_" + df["DATA"][idx].strftime("%d/%m/%Y")]
 
 #inserimento filtri
-st.sidebar.header("Filtri")
-st.sidebar.subheader("📅 Filtro date")
-opzioni_data = df["DATA"].unique()
-selected_year = st.sidebar.selectbox("Anno", "2025")
-months = opzioni_data.to_period("M").unique().astype(str)
-monthsinword = [
-    mesario[int(m.split("-")[1]) - 1]
-    for m in months
-    if m is not None
-]
+#st.sidebar.header("Filtri")
+#st.sidebar.subheader("📅 Filtro date")
+#opzioni_data = df["DATA"].unique()
+#selected_year = st.sidebar.selectbox("Anno", "2025")
+#months = opzioni_data.to_period("M").unique().astype(str)
+#monthsinword = [    mesario[int(m.split("-")[1]) - 1]    for m in months    if m is not None]
 
-selected_month = st.sidebar.selectbox("Mese", monthsinword)
-year = 2025
-month = (monthsinword.index(selected_month)+1)
-month_dates = [
-    d for d in opzioni_data
-    if d is not None and d.year == year and d.month == month
-]
-default_dates = [
-    d for d in st.session_state.get("selected_dates", [])
-    if d in month_dates
-]
+#selected_month = st.sidebar.selectbox("Mese", monthsinword)
+#year = 2025
+#month = (monthsinword.index(selected_month)+1)
+#month_dates = [    d for d in opzioni_data    if d is not None and d.year == year and d.month == month]
+#default_dates = [    d for d in st.session_state.get("selected_dates", [])    if d in month_dates]
 
-data = st.sidebar.multiselect(
-    "Giorno",
-    options=month_dates,
-    default=month_dates,
-    format_func=lambda d: d.strftime("%d"),
-    placeholder="Seleziona date..."
-)
-st.session_state["selected_dates"] = data
+#data = st.sidebar.multiselect(    "Giorno",    options=month_dates,    default=month_dates,    format_func=lambda d: d.strftime("%d"),    placeholder="Seleziona date...")
+#st.session_state["selected_dates"] = data
 
-if data == month_dates:
-    date_selezionate = selected_month
-    mese_selezionato = mesario[int((" - ".join(pd.to_datetime(data).strftime("%m"))).split(" - ")[0]) - 1]
-    giorno_selezionato = " - ".join(pd.to_datetime(data).strftime("%d"))
-else:
-    date_selezionate = " - ".join(pd.to_datetime(data).strftime("%d/%m"))
+#if data == month_dates:
+#    date_selezionate = selected_month
+#    mese_selezionato = mesario[int((" - ".join(pd.to_datetime(data).strftime("%m"))).split(" - ")[0]) - 1]
+#    giorno_selezionato = " - ".join(pd.to_datetime(data).strftime("%d"))
+#else:
+#    date_selezionate = " - ".join(pd.to_datetime(data).strftime("%d/%m"))
 
-opzioni_mercato = df["MERCATO"].unique()
+#opzioni_mercato = df["MERCATO"].unique()
 #seleziona tutti mercati
-st.sidebar.markdown("")
-st.sidebar.subheader("📍 Filtro mercati")
-seleziona_tutti_mercato = st.sidebar.checkbox("Seleziona tutti mercati", value=True)
-if seleziona_tutti_mercato:
-    mercato = st.sidebar.multiselect(
-        "Seleziona Mercato",
-        options=opzioni_mercato,
-        default=opzioni_mercato
-    )
-else:
-    mercato = st.sidebar.multiselect(
-        "Seleziona Mercato",
-        options=opzioni_mercato
-    )
+#st.sidebar.markdown("")
+#st.sidebar.subheader("📍 Filtro mercati")
+#seleziona_tutti_mercato = st.sidebar.checkbox("Seleziona tutti mercati", value=True)
+#if seleziona_tutti_mercato:
+#    mercato = st.sidebar.multiselect(        "Seleziona Mercato",        options=opzioni_mercato,        default=opzioni_mercato    )
+#else:
+#    mercato = st.sidebar.multiselect("Seleziona Mercato",options=opzioni_mercato    )
 #seleziona tutti item
 item = df["ITEM"].unique()
 
@@ -186,7 +223,8 @@ df_std_mercati_2025 = (
         "KG"].std()).reset_index()
 df = df.drop(columns=["SETTIMANA"])
 
-df_selection = df.query("MERCATO == @mercato & DATA == @data")
+#df_selection = df.query("MERCATO == @mercato & DATA == @data")
+df_selection = df
 
 df_selection_altro = df_selection.copy()
 df_selection_altro.loc[df_selection_altro["KG"] < 2, "ITEM"] = "Altro"
@@ -206,10 +244,10 @@ else:
     numero_giorni = len(df_selection["DATA"].unique())
     sommavolontari = 0
     sommaBeneficiario = 0
+    st.write(df_selection)
     for mercatomercato in df_selection["MERCATO"].unique().tolist():
-        for giornatamercato in df_selection["DATA"].unique().tolist():
-            giornatamercatostr = giornatamercato.strftime("%d/%m/%Y")
-            chiave = mercatomercato + "_" + giornatamercatostr
+        for giornatamercato in df_selection["DATA ESTESA"].unique().tolist():
+            chiave = mercatomercato + "_" + giornatamercato
             if chiave in dizionarioVolontari:
                 sommavolontari = sommavolontari + dizionarioVolontari[chiave]
             if chiave in dizionarioBeneficiari:
@@ -307,7 +345,7 @@ else:
             df_grafico_mercato_selezionato,
             x="KG",
             y=df_grafico_mercato_selezionato["MERCATO"],
-            title=f"<b>Cibo raccolto per mercato nel {titolo} {date_selezionate.lower()}</b>", #AGGIUNGERE GIORNO SELEZIONATO
+            title=f"<b>Cibo raccolto per mercato nel {titolo} {{date_selezionate.lower()}}</b>", #AGGIUNGERE GIORNO SELEZIONATO
             color_discrete_sequence=["#0083B8"] * len(df_grafico_mercato_selezionato_alimenti),
             template="plotly_white",
             hover_data=["MERCATO", "KG"],
@@ -315,7 +353,7 @@ else:
         )
         figBarMercati.update_layout(
             title=dict(
-                text=f"<b>Cibo recuperato per mercato nel/nei {titolo.lower()} {date_selezionate.lower()}</b>", #AGGIUNGERE GIORNO SELEZIONATO
+                text=f"<b>Cibo recuperato per mercato nel/nei {titolo.lower()} {{date_selezionate.lower()}}</b>", #AGGIUNGERE GIORNO SELEZIONATO
                 x=0.02,
                 xanchor="left",
                 font=dict(
@@ -388,7 +426,7 @@ else:
         )
         figTreeAlimenti.update_layout(
             title=dict(
-                text=f"<b>Composizione del cibo recuperato per mercato nel/nei {titolo.lower()} {date_selezionate.lower()}</b>",  # AGGIUNGERE GIORNO SELEZIONATO
+                text=f"<b>Composizione del cibo recuperato per mercato nel/nei {titolo.lower()} {{date_selezionate.lower()}}</b>",  # AGGIUNGERE GIORNO SELEZIONATO
                 x=0.02,
                 xanchor="left",
                 font=dict(
@@ -423,10 +461,9 @@ with tabfocusalimentigiornate:
         numero_beneficiari_mercato_corrente = 0
         numero_giorni_mercato_corrente = 0
         for mercatomercato in tabella_mercato["MERCATO"].unique().tolist():
-            for giornatamercato in tabella_mercato["DATA"].unique().tolist():
+            for giornatamercato in tabella_mercato["DATA ESTESA"].unique().tolist():
                 numero_giorni_mercato_corrente = numero_giorni_mercato_corrente + 1
-                giornatamercatostr = giornatamercato.strftime("%d/%m/%Y")
-                chiave = mercatomercato + "_" + giornatamercatostr
+                chiave = mercatomercato + "_" + giornatamercato
                 if chiave in dizionarioVolontari:
                     numero_volontari_mercato_corrente = numero_volontari_mercato_corrente + dizionarioVolontari[chiave]
                 if chiave in dizionarioBeneficiari:

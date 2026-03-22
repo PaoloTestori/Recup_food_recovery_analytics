@@ -30,7 +30,7 @@ def init_filter_data():
 def render_filter_anno(anni: list):
     init_filter_anno()
 
-    st.sidebar.markdown("## 📅 Filtri")
+    st.sidebar.markdown("## 📅 Filtro date")
 
     anno = st.sidebar.selectbox(
         "Anno",
@@ -50,18 +50,18 @@ def render_filter_mese():
     )
     st.session_state["MESE"] = mese
 
-def render_filter_data():
+def render_filter_data(giorni_disponibili: list) -> list:
     init_filter_data()
 
     giorni = st.sidebar.multiselect(
         "Giorni",
-        list(range(1, 32)),
-        default=st.session_state["DATA"]
+        giorni_disponibili,
+        default=giorni_disponibili
     )
 
     # 🔥 aggiorna stato globale
     st.session_state["DATA"] = giorni
-
+    return giorni
 
 # 🔹 Getter pulito
 def get_filter_anno():
