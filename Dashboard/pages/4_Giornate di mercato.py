@@ -61,6 +61,7 @@ df = filtra_df_anno(df, filtroAnno)
 st.session_state["Anno_selezionato"] = Anno_selezionato
 render_filter_mese()
 filtroMese = get_filter_mese()
+filtroGiorni = get_filter_giorni()
 df = filtra_df_mese(df, filtroMese)
 df["DATA ESTESA"] = df["DATA"].dt.strftime('%d/%m/%Y')
 df["DATA"]= df["DATA"].dt.day
@@ -70,32 +71,6 @@ date_selezionate = render_filter_data(date_disponibili)
 #st.write(date_selezionate)
 filtroGiorni = get_filter_giorni()
 df = filtra_df_giorno(df, filtroGiorni)
-
-
-tabconfrontomercatigiornate, tabfocusalimentigiornate = st.tabs(["Focus Totali", "Focus Mercati"])
-
-st.markdown("""
-<style>
-button[data-baseweb="tab"] {
-    font-size: 16px;
-    padding: 10px 24px;
-    border-radius: 10px;
-    background-color: #1f1f1f;
-    color: #aaa;
-}
-
-button[data-baseweb="tab"]:hover {
-    background-color: #333;
-    color: white;
-}
-
-button[data-baseweb="tab"][aria-selected="true"] {
-    background: linear-gradient(90deg,#ff4b4b,#ff914d);
-    color: white;
-    font-weight: bold;
-}
-</style>
-""", unsafe_allow_html=True)
 
 # Percorso del file JSON del service account
 creds = service_account.Credentials.from_service_account_info(
@@ -244,7 +219,6 @@ else:
     numero_giorni = len(df_selection["DATA"].unique())
     sommavolontari = 0
     sommaBeneficiario = 0
-    st.write(df_selection)
     for mercatomercato in df_selection["MERCATO"].unique().tolist():
         for giornatamercato in df_selection["DATA ESTESA"].unique().tolist():
             chiave = mercatomercato + "_" + giornatamercato
@@ -252,14 +226,60 @@ else:
                 sommavolontari = sommavolontari + dizionarioVolontari[chiave]
             if chiave in dizionarioBeneficiari:
                 sommaBeneficiario = sommaBeneficiario + dizionarioBeneficiari[chiave]
+
+    totale_giorno = round(df_selection["KG"].sum(),2)
+    st.markdown(f"""
+    <h1 style='margin-bottom:0;'>📅 {filtroMese["MESE"]} {filtroAnno["ANNO"]}</h1>
+    """, unsafe_allow_html=True)
+
+#AGGIUNTI GIORNI SELEZIONATI NEL TITOLO
+    #if date_selezionate != date_disponibili:
+    #    st.markdown("### Giorni selezionati")
+    #    cols = st.columns(10)
+    #    for i, giorno in enumerate(filtroGiorni['DATA']):
+    #        cols[i % 10].markdown(
+    #            f"""
+    #            <div style="
+    #                background: linear-gradient(90deg, #ff4b4b, #ff6b6b);
+    #                padding: 8px 12px;
+    #                border-radius: 10px;
+    #                text-align: center;
+    #                font-weight: bold;
+    #                color: white;
+    #            ">
+    #                {giorno:02d}
+    #            </div>
+    #            """,
+    #            unsafe_allow_html=True
+    #        )
+    #st.markdown(" ")
+
+    tabconfrontomercatigiornate, tabfocusalimentigiornate = st.tabs(["Focus Totali", "Focus Mercati"])
+
+    st.markdown("""
+    <style>
+    button[data-baseweb="tab"] {
+        font-size: 16px;
+        padding: 10px 24px;
+        border-radius: 10px;
+        background-color: #1f1f1f;
+        color: #aaa;
+    }
+
+    button[data-baseweb="tab"]:hover {
+        background-color: #333;
+        color: white;
+    }
+
+    button[data-baseweb="tab"][aria-selected="true"] {
+        background: linear-gradient(90deg,#ff4b4b,#ff914d);
+        color: white;
+        font-weight: bold;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
     with tabconfrontomercatigiornate:
-        totale_giorno = round(df_selection["KG"].sum(),2)
-        if date_selezionate in mesario:
-            titolo = "Mese"
-        else:
-            titolo = "Giorno/i"
-        #nuovo
-        st.markdown(f"## 📅 {titolo}: {date_selezionate}")
         st.markdown("""
                         <style>
                         .kpi-card {
@@ -345,7 +365,7 @@ else:
             df_grafico_mercato_selezionato,
             x="KG",
             y=df_grafico_mercato_selezionato["MERCATO"],
-            title=f"<b>Cibo raccolto per mercato nel {titolo} {{date_selezionate.lower()}}</b>", #AGGIUNGERE GIORNO SELEZIONATO
+            title=f"<b>Cibo raccolto per mercato</b>", #AGGIUNGERE GIORNO SELEZIONATO
             color_discrete_sequence=["#0083B8"] * len(df_grafico_mercato_selezionato_alimenti),
             template="plotly_white",
             hover_data=["MERCATO", "KG"],
@@ -353,7 +373,7 @@ else:
         )
         figBarMercati.update_layout(
             title=dict(
-                text=f"<b>Cibo recuperato per mercato nel/nei {titolo.lower()} {{date_selezionate.lower()}}</b>", #AGGIUNGERE GIORNO SELEZIONATO
+                text=f"<b>Cibo recuperato per mercato</b>", #AGGIUNGERE GIORNO SELEZIONATO
                 x=0.02,
                 xanchor="left",
                 font=dict(
@@ -426,7 +446,7 @@ else:
         )
         figTreeAlimenti.update_layout(
             title=dict(
-                text=f"<b>Composizione del cibo recuperato per mercato nel/nei {titolo.lower()} {{date_selezionate.lower()}}</b>",  # AGGIUNGERE GIORNO SELEZIONATO
+                text=f"<b>Composizione del cibo recuperato per mercato</b>",  # AGGIUNGERE GIORNO SELEZIONATO
                 x=0.02,
                 xanchor="left",
                 font=dict(
@@ -454,7 +474,7 @@ with tabfocusalimentigiornate:
     else:
         header = "Giorno/i"
     for merc in df_selection_altro["MERCATO"].unique():
-        st.markdown(f"## 📅 {header}: {date_selezionate} - 📍Mercato: {merc}")
+        st.markdown(f"## 📍Mercato: {merc}")
         tabella_mercato = df_selection_altro[df_selection_altro["MERCATO"] == merc].copy().reset_index(drop=True)
         #st.table(tabella_mercato)
         numero_volontari_mercato_corrente = 0
