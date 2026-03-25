@@ -60,7 +60,10 @@ def render_filter_data(giorni_disponibili: list) -> list:
     )
 
     # 🔥 aggiorna stato globale
-    st.session_state["DATA"] = giorni
+    if "DATA" not in st.session_state:
+        st.session_state["DATA"] = []
+    else:
+        st.session_state["DATA"] = giorni
     return giorni
 
 # 🔹 Getter pulito
@@ -73,9 +76,14 @@ def get_filter_mese():
         "MESE": st.session_state["MESE"],
     }
 def get_filter_giorni():
-    return {
-        "DATA": st.session_state["DATA"]
-    }
+    if "DATA" not in st.session_state:
+        return {
+            "DATA": []
+        }
+    else:
+        return {
+            "DATA": st.session_state["DATA"]
+        }
 
 # 🔹 Reset opzionale
 #def reset_filters():
