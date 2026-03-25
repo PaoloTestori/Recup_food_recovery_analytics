@@ -146,42 +146,59 @@ mercati_anni["ANNO"] = mercati_anni["ANNO"].astype(str)
 totali = mercati_anni.groupby("ANNO")["KG"].sum()
 
 total = round(float(df["KG"].sum()))
-#st.markdown(f"## 📅 Anno: 2025")
-st.markdown("""
-                <style>
-                .kpi-card {
-                    background: #111;
-                    padding: 2px 2px;
-                    border-radius: 14px;
-                    text-align: center;
-                    box-shadow: 0 0 12px rgba(0,0,0,0.4);
-                }
-                .kpi-title {
-                    font-size: 36px;
-                    color: #bbbbbb;
-                }
-                .kpi-value {
-                    font-size: 36px;
-                    font-weight: 700;
-                    color: #00ff9c;
-                }
-                .kpi-icon {
-                    font-size: 36px;
-                }
-                </style>
-                """, unsafe_allow_html=True)
-col2 = st.columns(1)
 
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700&family=Space+Grotesk:wght@700&display=swap');
+
+.kpi-card {
+    background: linear-gradient(135deg, #0d1f1a 0%, #0a1a14 100%);
+    border: 1px solid #1a3a2a;
+    padding: 1.2rem 2rem;
+    border-radius: 16px;
+    text-align: center;
+    max-width: 680px;
+    margin: 1rem auto 0 auto;  /* ← abbassa la card */
+    font-family: 'DM Sans', sans-serif;
+}
+.kpi-icon {
+    font-size: 2rem;
+    line-height: 1;
+    margin-bottom: 0.3rem;
+}
+.kpi-title {
+    color: #8a9ba8;
+    font-size: 2rem;          /* ← era 0.9rem */
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 0.3rem;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 400;
+}
+.kpi-value {
+    color: #FFD700;
+    font-size: 2.6rem;
+    font-weight: 700;
+    line-height: 1;
+    font-family: 'Space Grotesk', sans-serif;
+}
+
+.block-container {
+    padding-top: 1.5rem !important;
+    padding-bottom: 0rem !important;
+}
+</style>
+""", unsafe_allow_html=True)
 
 st.markdown(f"""
-                    <div class="kpi-card">
-                        <div class="kpi-icon">🌱</div>
-                        <div class="kpi-title">Cibo recuperato dal 2025</div>
-                        <div class="kpi-value">{total} kg</div>
-                    </div>
-                    """, unsafe_allow_html=True)
+<div class="kpi-card">
+    <div class="kpi-icon">🌱</div>
+    <div class="kpi-title">Cibo recuperato dal 2025</div>
+    <div class="kpi-value">{total:} kg</div>
+</div>
+""", unsafe_allow_html=True)
 
-st.markdown("<br><br>", unsafe_allow_html=True)
+st.markdown("", unsafe_allow_html=True)
 grafico_mercati_anni = px.bar(
     mercati_anni,
     x="ANNO",
