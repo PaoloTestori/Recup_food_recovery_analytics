@@ -98,7 +98,12 @@ df["Numero Volontari"] = 0
 #dizionarioVolontari = {}
 
 for idx, row in df.iterrows():
-    df["Numero Volontari"][idx] = dizionarioVolontari[str.upper(df["MERCATO"][idx]) + "_" + df["DATA"][idx].strftime("%d/%m/%Y")]
+    chiave = str.upper(df["MERCATO"][idx]) + "_" + df["DATA"][idx].strftime("%d/%m/%Y")
+    #st.write(chiave)
+    if chiave in dizionarioVolontari:
+        df["Numero Volontari"][idx] = dizionarioVolontari[str.upper(df["MERCATO"][idx]) + "_" + df["DATA"][idx].strftime("%d/%m/%Y")]
+    else:
+        df["Numero Volontari"][idx] = 0
 
 mercati_2025 = df.drop(columns=["DATA", "MESE", "ANNO"]).groupby("MERCATO").sum()["KG"].reset_index()
 grafico_mercati_2025=go.Figure(data=[go.Pie(labels=mercati_2025["MERCATO"],values=mercati_2025["KG"],hole=0.3)])

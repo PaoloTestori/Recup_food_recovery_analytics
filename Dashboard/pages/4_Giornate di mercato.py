@@ -203,7 +203,6 @@ df = df.drop(columns=["SETTIMANA"])
 
 #df_selection = df.query("MERCATO == @mercato & DATA == @data")
 df_selection = df
-
 df_selection_altro = df_selection.copy()
 df_selection_altro.loc[df_selection_altro["KG"] < 2, "ITEM"] = "Altro"
 df_grafico_mercato_selezionato_alimenti = df_selection_altro.drop(columns=["DATA"])
@@ -225,7 +224,9 @@ else:
     for mercatomercato in df_selection["MERCATO"].unique().tolist():
         for giornatamercato in df_selection["DATA ESTESA"].unique().tolist():
             chiave = mercatomercato + "_" + giornatamercato
+            #st.write(chiave)
             if chiave in dizionarioVolontari:
+                #st.write(dizionarioVolontari[chiave])
                 sommavolontari = sommavolontari + dizionarioVolontari[chiave]
             if chiave in dizionarioBeneficiari:
                 sommaBeneficiario = sommaBeneficiario + dizionarioBeneficiari[chiave]

@@ -83,6 +83,7 @@ giornate_di_mercato = {
     "TERMOPILI" : 4,
     "CATONE" : 4,
     "GRAMSCI - SAN DONATO" : 4,
+    "GRAMSCI" : 4,
     "OGLIO" : 5,
     "VALVASSORI PERONI" : 5,
     "TABACCHI" : 5,
@@ -97,7 +98,7 @@ giornate_di_mercato = {
 #df_Form = pd.read_csv(filepath_or_buffer= st.secrets["WEBHOOK_URL_MERCATI_RISPOSTE"],usecols=[0,1,2,3,5,6],parse_dates=[1], skiprows=[0],)
 
 df_Form["Data del Mercato"] = pd.to_datetime(df_Form["Data del Mercato"], dayfirst=True, errors="coerce")
-df_form_2025 = df_Form[df_Form["Data del Mercato"].dt.year == 2025]
+df_form_2025 = df_Form[df_Form["Data del Mercato"].dt.year.isin([2024, 2025])]
 df_form_2025 = df_form_2025.reset_index(drop=True)
 #gestione numero volontari
 df_form_2025["Inserisci NOME e COGNOME dellə volontariə presenti"] = df_form_2025["Inserisci NOME e COGNOME dellə volontariə presenti"].str.replace(";", ",").str.replace(".", ",").str.replace("-",",").str.replace("/",",").str.replace(" e ",",")
@@ -130,12 +131,20 @@ idx = 0
 df["DATA"] = pd.to_datetime(df["DATA"],  format="mixed", dayfirst=True, errors="coerce")
 #df["KG"] = df["KG"].str.replace(",", ".",regex=False).astype(float)
 df["Numero Volontari"] = 0
-for idx, row in df.iterrows():
-    df["Numero Volontari"][idx] = dizionarioVolontari[str.upper(df["MERCATO"][idx]) + "_" + df["DATA"][idx].strftime("%d/%m/%Y")]
 df["Numero Beneficiari"] = 0
-idx = 0
 for idx, row in df.iterrows():
-    df["Numero Beneficiari"][idx] = dizionarioBeneficiari[str.upper(df["MERCATO"][idx]) + "_" + df["DATA"][idx].strftime("%d/%m/%Y")]
+    chiave = str.upper(df["MERCATO"][idx]) + "_" + df["DATA"][idx].strftime("%d/%m/%Y")
+    #st.write(chiave)
+    if chiave in dizionarioVolontari:
+        df["Numero Volontari"][idx] = dizionarioVolontari[str.upper(df["MERCATO"][idx]) + "_" + df["DATA"][idx].strftime("%d/%m/%Y")]
+    else:
+        df["Numero Volontari"][idx] = 0
+    if chiave in dizionarioBeneficiari:
+        df["Numero Beneficiari"][idx] = dizionarioVolontari[str.upper(df["MERCATO"][idx]) + "_" + df["DATA"][idx].strftime("%d/%m/%Y")]
+    else:
+        df["Numero Beneficiari"][idx] = 0
+
+idx = 0
 
 df_media_mercati_2025 = df
 df_media_mercati_2025["SETTIMANA"] = df_media_mercati_2025["DATA"].dt.to_period("W").dt.start_time
@@ -153,6 +162,7 @@ df_std_mercati_2025 = (
 df = df.drop(columns=["SETTIMANA"])
 
 df_selection = df
+df["Numero volontari"] = df["NUMERO VOLONTARI"]
 
 df_volontari_mercato_selezionato = (
     df.groupby(by=["MERCATO", "DATA"])
@@ -168,7 +178,6 @@ df_beneficiari_mercato_selezionato = (
     .pivot(index="DATA", columns="MERCATO", values="Numero Beneficiari")
     .fillna(0)
 )
-#st.write(df)
 
 with tabconfronti:
     df_grafico_mercato_selezionato = (
@@ -533,12 +542,12 @@ with tabvolontari:
             }
             </style>
             """, unsafe_allow_html=True)
-            st.markdown(f"""<div class="card-info">
-                <h2>️📍 {mercato}</h2>
-                <p>👥 Volontari medi per giornata: <span>{media_volontari_mercato_corrente}</span></p>
-                <p>🤝 Beneficiari raggiunti: <span>{media_beneficiari_mercato_corrente}</span></p>
-            </div>
-            """, unsafe_allow_html=True)
+#            st.markdown(f"""<div class="card-info">
+#                <h2>️📍 {mercato}</h2>
+#                <p>👥 Volontari medi per giornata: <span>{media_volontari_mercato_corrente}</span></p>
+#                <p>🤝 Beneficiari raggiunti: <span>{media_beneficiari_mercato_corrente}</span></p>
+#            </div>
+#            """, unsafe_allow_html=True)
             figVolontariScatter = go.Figure()
             figVolontariScatter.add_trace(
                 go.Scatter(
