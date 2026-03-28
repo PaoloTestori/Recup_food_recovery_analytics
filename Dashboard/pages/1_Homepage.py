@@ -1,11 +1,6 @@
-import gspread
 import plotly.express as px
 import pandas as pd
-from google.oauth2 import service_account
-import numpy as np
 import streamlit as st
-import plotly.graph_objects as go
-from sklearn.metrics import r2_score
 
 st.set_page_config(page_title="Homepage",
                    page_icon="🍌",
@@ -49,6 +44,7 @@ button[data-baseweb="tab"][aria-selected="true"] {
 #lettura file mercati 2025/2026
 wbUrl = st.secrets["WEBHOOK_URL_MERCATI2025"]
 wbUrl2026 = st.secrets["WEBHOOK_URL_MERCATI2026"]
+wbUrl2024 = st.secrets["WEBHOOK_URL_MERCATI2024"]
 
 st.set_page_config(layout="wide")
 
@@ -67,15 +63,22 @@ df_2026 = pd.read_csv(
     parse_dates=[0],
     skiprows=[1],
 )
+df_2024 = pd.read_csv(
+    filepath_or_buffer= wbUrl2024,
+    header=0,
+    usecols=[0,1,2,3],
+    parse_dates=[0],
+    skiprows=[1],
+)
 #lettura file form google
 df_Form = pd.read_csv(
     filepath_or_buffer= st.secrets["WEBHOOK_URL_MERCATI_RISPOSTE"],
-    usecols=[0,1,2,3,5,6],
+    usecols=[0,1,2,3,4,5,6],
     parse_dates=[1],
     skiprows=[0],
 )
 
-df = pd.concat([df, df_2026], ignore_index=True)
+df = pd.concat([df_2024, df_2025, df_2026], ignore_index=True)
 
 df["KG"] = (
     df["KG"]
@@ -95,7 +98,7 @@ for row2026 in df_2026.iterrows():
     dizionarioBeneficiari[row2026[1]["MERCATO"] + "_" + row2026[1]["DATA"]] = int(row2026[1]["NUMERO BENEFICIARI"])
 
 df_Form["Data del Mercato"] = pd.to_datetime(df_Form["Data del Mercato"], dayfirst=True, errors="coerce")
-df_form_2025 = df_Form[df_Form["Data del Mercato"].dt.year == 2025]
+df_form_2025 = df_Form[df_Form["Data del Mercato"].dt.year.isin([2024, 2025])]
 df_form_2025 = df_form_2025.reset_index(drop=True)
 #gestione numero volontari
 df_form_2025["Inserisci NOME e COGNOME dellə volontariə presenti"] = df_form_2025["Inserisci NOME e COGNOME dellə volontariə presenti"].str.replace(";", ",").str.replace(".", ",").str.replace("-",",").str.replace("/",",").str.replace(" e ",",")
@@ -104,6 +107,7 @@ df_form_2025["Numero volontari"] = 0
 for idx, vol in df_form_2025["Inserisci NOME e COGNOME dellə volontariə presenti"].items():
     if vol is "No Data":
         continue
+    vol = vol.replace("+", "")
     if "," in vol:
         listaVolontari = str.split(vol,",")
         listaVolontari = list(filter(None, listaVolontari))
@@ -117,7 +121,8 @@ for idx, vol in df_form_2025["Inserisci NOME e COGNOME dellə volontariə presen
         dizionarioVolontari[str.upper(df_form_2025["Nome del Mercato"][idx]) + "_" + (df_form_2025["Data del Mercato"][idx].strftime("%d/%m/%Y"))] = numeroVolontari
 
 for idx, ben in df_form_2025["Quantə beneficiariə? (inserisci un numero)"].items():
-    if ben is "" or ben is "-":
+    #st.write(ben)
+    if str(ben).strip() in ["", "-", ".", "Nessuna", "Nessuno", "nessuna", "nessuno"]:
         continue
     dizionarioBeneficiari[str.upper(df_form_2025["Nome del Mercato"][idx]) + "_" + (
         df_form_2025["Data del Mercato"][idx].strftime("%d/%m/%Y"))] = int(df_form_2025["Quantə beneficiariə? (inserisci un numero)"][idx])
@@ -129,7 +134,12 @@ df["DATA"] = pd.to_datetime(df["DATA"],  format="mixed", dayfirst=True, errors="
 #df["KG"] = df["KG"].str.replace(",", ".",regex=False).astype(float)
 #df["Numero Volontari"] = 0
 for idx, row in df.iterrows():
-    df["NUMERO VOLONTARI"][idx] = dizionarioVolontari[str.upper(df["MERCATO"][idx]) + "_" + df["DATA"][idx].strftime("%d/%m/%Y")]
+    chiave = str.upper(df["MERCATO"][idx]) + "_" + df["DATA"][idx].strftime("%d/%m/%Y")
+    #st.write(chiave)
+    if chiave in dizionarioVolontari:
+        df["NUMERO VOLONTARI"][idx] = dizionarioVolontari[str.upper(df["MERCATO"][idx]) + "_" + df["DATA"][idx].strftime("%d/%m/%Y")]
+    else:
+        df["NUMERO VOLONTARI"][idx] = 0
 st.session_state["df"] = df
 
 df["ANNO"] = pd.to_datetime(df['DATA'], format='%d-%m-%Y').dt.year
@@ -193,7 +203,7 @@ st.markdown("""
 st.markdown(f"""
 <div class="kpi-card">
     <div class="kpi-icon">🌱</div>
-    <div class="kpi-title">Cibo recuperato dal 2025</div>
+    <div class="kpi-title">Cibo recuperato dal 2024</div>
     <div class="kpi-value">{total:} kg</div>
 </div>
 """, unsafe_allow_html=True)
