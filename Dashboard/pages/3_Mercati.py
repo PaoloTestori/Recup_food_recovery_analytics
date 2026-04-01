@@ -247,7 +247,7 @@ with tabconfronti:
 
                     }
                     .kpi-value {
-                        color: #FFD700;
+                        color: #ffea00;
                         font-size: 1.5rem;
                         font-weight: 700;
                         line-height: 1;
