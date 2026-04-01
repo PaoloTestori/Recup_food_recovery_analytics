@@ -1,6 +1,8 @@
+
 import plotly.express as px
 import pandas as pd
 import streamlit as st
+import plotly.graph_objects as go
 
 st.set_page_config(page_title="Homepage",
                    page_icon="🍌",
@@ -45,6 +47,7 @@ button[data-baseweb="tab"][aria-selected="true"] {
 wbUrl = st.secrets["WEBHOOK_URL_MERCATI2025"]
 wbUrl2026 = st.secrets["WEBHOOK_URL_MERCATI2026"]
 wbUrl2024 = st.secrets["WEBHOOK_URL_MERCATI2024"]
+wbUrl2023 = st.secrets["WEBHOOK_URL_MERCATI2023"]
 
 st.set_page_config(layout="wide")
 
@@ -70,6 +73,13 @@ df_2024 = pd.read_csv(
     parse_dates=[0],
     skiprows=[1],
 )
+df_2023 = pd.read_csv(
+    filepath_or_buffer= wbUrl2023,
+    header=0,
+    usecols=[0,1,2,3],
+    parse_dates=[0],
+    skiprows=[1],
+)
 #lettura file form google
 df_Form = pd.read_csv(
     filepath_or_buffer= st.secrets["WEBHOOK_URL_MERCATI_RISPOSTE"],
@@ -78,7 +88,7 @@ df_Form = pd.read_csv(
     skiprows=[0],
 )
 
-df = pd.concat([df_2024, df_2025, df_2026], ignore_index=True)
+df = pd.concat([df_2023, df_2024, df_2025, df_2026], ignore_index=True)
 
 df["KG"] = (
     df["KG"]
@@ -133,6 +143,7 @@ idx = 0
 df["DATA"] = pd.to_datetime(df["DATA"],  format="mixed", dayfirst=True, errors="coerce")
 #df["KG"] = df["KG"].str.replace(",", ".",regex=False).astype(float)
 #df["Numero Volontari"] = 0
+
 for idx, row in df.iterrows():
     chiave = str.upper(df["MERCATO"][idx]) + "_" + df["DATA"][idx].strftime("%d/%m/%Y")
     #st.write(chiave)
@@ -156,6 +167,24 @@ mercati_anni["ANNO"] = mercati_anni["ANNO"].astype(str)
 totali = mercati_anni.groupby("ANNO")["KG"].sum()
 
 total = round(float(df["KG"].sum()))
+st.markdown("")
+mercati_anni = mercati_anni.sort_values("ANNO")
+mercati_anni["pct_change"] = mercati_anni["KG"].pct_change() *100
+mercati_anni["pct_label"] = mercati_anni["pct_change"].apply(
+    lambda x: f"{x:+.0f}%" if pd.notnull(x) else ""
+)
+mercati_anni.loc[mercati_anni["ANNO"] == "2026", "pct_label"] = "(parziale)"
+mercati_anni["arrow"] = mercati_anni["pct_change"].apply(
+    lambda x: "↑" if x > 0 else ("↓" if x < 0 else "")
+)
+
+mercati_anni["label"] = (
+    mercati_anni["KG"].astype(int).astype(str) + " kg<br>" +
+    mercati_anni["arrow"] + " " + mercati_anni["pct_label"]
+)
+mercati_anni["color"] = mercati_anni["pct_change"].apply(
+    lambda x: "#00ff9c" if x > 0 else "#ff4b4b"
+)
 
 st.markdown("""
 <style>
@@ -203,7 +232,7 @@ st.markdown("""
 st.markdown(f"""
 <div class="kpi-card">
     <div class="kpi-icon">🌱</div>
-    <div class="kpi-title">Cibo recuperato dal 2024</div>
+    <div class="kpi-title">Cibo recuperato dal 2023</div>
     <div class="kpi-value">{total:} kg</div>
 </div>
 """, unsafe_allow_html=True)
@@ -213,12 +242,18 @@ grafico_mercati_anni = px.bar(
     mercati_anni,
     x="ANNO",
     y="KG",
+    text="label",
     orientation="v",
+    color="color",
+    color_discrete_map="identity",
     color_discrete_sequence=["#0083B8"],
     template="plotly_white"
 )
 grafico_mercati_anni.update_layout(
-    xaxis=dict(title="ANNO"),
+    xaxis=dict(title="ANNO",
+               categoryorder="array",
+               categoryarray=mercati_anni["ANNO"]
+    ),
     yaxis=dict(title="KG"),
     legend=dict(orientation="h", y=-0.3),
     title="♻️ Recupero negli anni",
@@ -228,12 +263,17 @@ grafico_mercati_anni.update_layout(
 )
 grafico_mercati_anni.update_traces(
     width=0.4,
-    texttemplate='%{y:.0f} Kg',
-    textposition='outside'
+    textposition='outside',
+    textfont_size=14,
+    marker_line_width=2,
+    marker_line_color="white"
 )
 grafico_mercati_anni.update_layout(
     yaxis=dict(range=[0, mercati_anni["KG"].max() * 1.2]),
-    bargap=0.5
+    bargap=0.5,
+    showlegend=False,
+    yaxis_title="",
+    xaxis_title=""
 )
 
 grafico_confronto_anni = px.line(

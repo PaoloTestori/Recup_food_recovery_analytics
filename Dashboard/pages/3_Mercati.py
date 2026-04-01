@@ -90,7 +90,8 @@ giornate_di_mercato = {
     "OSOPPO" : 5,
     "PAPINIANO" : 5,
     "BENEDETTO MARCELLO" : 5,
-    "PADERNO DUGNANO" : 2
+    "PADERNO DUGNANO" : 2,
+    "ESTERLE": 5
 }
 
 #df = pd.read_csv(filepath_or_buffer= wbUrl,header=0,usecols=[0,1,2,3],parse_dates=[0],skiprows=[1],)
@@ -264,7 +265,7 @@ with tabconfronti:
                 st.markdown(f"""
                 <div style="margin-bottom:20px;">
                   <div class="header-title">📍 {mercato}</div>
-                  <div class="header-subtitle">📅 Anno 2025 — Analisi recupero</div>
+                  <div class="header-subtitle">📅 Analisi recupero</div>
                 </div>
                 """, unsafe_allow_html=True)
 
@@ -399,7 +400,7 @@ with tabconfronti:
                 st.markdown(f"""
                 <div style="margin-bottom:20px;">
                   <div class="header-title">📍 {mercato}</div>
-                  <div class="header-subtitle">📅 Analisi andamento medio 2025</div>
+                  <div class="header-subtitle">📅 Analisi andamento medio</div>
                 </div>
                 """, unsafe_allow_html=True)
                 # ===== KPI ROW =====

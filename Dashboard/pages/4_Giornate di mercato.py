@@ -108,6 +108,10 @@ giornate_di_mercato = {
 emoji_alimenti = {
     "UVA" : "🍇",
 }
+st.markdown(f"""
+<h1 style='margin-bottom:0;'>📅 {filtroMese["MESE"]} {filtroAnno["ANNO"]}</h1>
+""", unsafe_allow_html=True)
+tabconfrontomercatigiornate, tabfocusalimentigiornate = st.tabs(["Focus Totali", "Focus Mercati"])
 
 #df = pd.read_csv(    filepath_or_buffer= wbUrl,    header=0,    usecols=[0,1,2,3],    parse_dates=[0],    skiprows=[1],)
 #lettura file form google
@@ -219,6 +223,8 @@ else:
     massimo_recupero = round(max(totali.values),2)
     massimo_mercato = totali.idxmax()
     numero_giorni = len(df_selection["DATA"].unique())
+    volontari = False
+    beneficiari = False
     sommavolontari = 0
     sommaBeneficiario = 0
     for mercatomercato in df_selection["MERCATO"].unique().tolist():
@@ -226,15 +232,17 @@ else:
             chiave = mercatomercato + "_" + giornatamercato
             #st.write(chiave)
             if chiave in dizionarioVolontari:
-                #st.write(dizionarioVolontari[chiave])
+                volontari = True
                 sommavolontari = sommavolontari + dizionarioVolontari[chiave]
             if chiave in dizionarioBeneficiari:
+                beneficiari = True
                 sommaBeneficiario = sommaBeneficiario + dizionarioBeneficiari[chiave]
-
+    if not volontari:
+        sommavolontari = "Na"
+    if not beneficiari:
+        sommaBeneficiario = "Na"
     totale_giorno = round(df_selection["KG"].sum(),2)
-    st.markdown(f"""
-    <h1 style='margin-bottom:0;'>📅 {filtroMese["MESE"]} {filtroAnno["ANNO"]}</h1>
-    """, unsafe_allow_html=True)
+
 
 #AGGIUNTI GIORNI SELEZIONATI NEL TITOLO
     #if date_selezionate != date_disponibili:
@@ -258,7 +266,6 @@ else:
     #        )
     #st.markdown(" ")
 
-    tabconfrontomercatigiornate, tabfocusalimentigiornate = st.tabs(["Focus Totali", "Focus Mercati"])
 
     st.markdown("""
     <style>
@@ -484,17 +491,28 @@ with tabfocusalimentigiornate:
         numero_volontari_mercato_corrente = 0
         numero_beneficiari_mercato_corrente = 0
         numero_giorni_mercato_corrente = 0
+        volontari = False
+        beneficiari = False
         for mercatomercato in tabella_mercato["MERCATO"].unique().tolist():
             for giornatamercato in tabella_mercato["DATA ESTESA"].unique().tolist():
                 numero_giorni_mercato_corrente = numero_giorni_mercato_corrente + 1
                 chiave = mercatomercato + "_" + giornatamercato
                 if chiave in dizionarioVolontari:
+                    volontari = True
                     numero_volontari_mercato_corrente = numero_volontari_mercato_corrente + dizionarioVolontari[chiave]
                 if chiave in dizionarioBeneficiari:
+                    beneficiari = True
                     numero_beneficiari_mercato_corrente = numero_beneficiari_mercato_corrente + dizionarioBeneficiari[chiave]
         numero_volontari_mercato_corrente = round(numero_volontari_mercato_corrente/numero_giorni_mercato_corrente)
         numero_beneficiari_mercato_corrente = round(numero_beneficiari_mercato_corrente/numero_giorni_mercato_corrente)
         totale_giorno_mercato_corrente = round(tabella_mercato["KG"].sum(), 1)
+        media_cibo_volontario = round(totale_giorno_mercato_corrente / numero_volontari_mercato_corrente, 1)
+        if not volontari:
+            numero_volontari_mercato_corrente = "Na"
+            media_cibo_volontario = "Na"
+        if not beneficiari:
+            numero_beneficiari_mercato_corrente = "Na"
+            media_cibo_volontario = "Na"
         data_mercato_corrente = tabella_mercato["DATA"].iloc[0].strftime("%d/%m/%Y")
         chiave = merc  + "_" + data_mercato_corrente
         tabella_mercato = (tabella_mercato.drop(columns=["DATA", "MESE", "ANNO"])).groupby("ITEM").sum()[["KG"]].reset_index()
@@ -553,7 +571,7 @@ with tabfocusalimentigiornate:
                     <div class="kpi-card">
                         <div class="kpi-icon">💪</div>
                         <div class="kpi-title">Media per volontario</div>
-                        <div class="kpi-value">{totale_giorno_mercato_corrente / numero_volontari_mercato_corrente:.1f} kg</div>
+                        <div class="kpi-value">{media_cibo_volontario} kg</div>
                     </div>
                     """, unsafe_allow_html=True)
 
