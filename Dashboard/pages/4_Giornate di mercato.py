@@ -307,10 +307,9 @@ else:
                         margin-bottom: 0.3rem;
                         font-family: 'DM Sans', sans-serif;
                         font-weight: 400;
-
                     }
                     .kpi-value {
-                        color: #FFD700;
+                        color: #ffea00;
                         font-size: 1.2rem;
                         font-weight: 700;
                         line-height: 1;
