@@ -27,8 +27,22 @@ spec = importlib.util.spec_from_file_location(
 Anno = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(Anno)
 filtra_df = Anno.filtra_df
+st.set_page_config(layout="wide")
+df = st.session_state["df"].copy()
+anni_disponibili = df["ANNO"].unique().astype(int).tolist()
+df_Form = st.session_state["df_Form"].copy()
+dizionarioVolontari = st.session_state["dizionarioVolontari"].copy()
+#filtri
+render_filter_anno(anni_disponibili)
+filtroAnno = get_filter_anno()
+df = filtra_df(df, filtroAnno)
+Anno_selezionato = str(filtroAnno["ANNO"])
+st.session_state["Anno_selezionato"] = Anno_selezionato
+st.markdown(f"""
+<h1 style='margin-bottom:0;'>📅 Anno {filtroAnno["ANNO"]}</h1>
+""", unsafe_allow_html=True)
 
-
+st.sidebar.text("Made with ❤ by Recup")
 tab1, tab2 = st.tabs(["Mercati", "Andamenti"])
 
 
@@ -55,19 +69,6 @@ button[data-baseweb="tab"][aria-selected="true"] {
 </style>
 """, unsafe_allow_html=True)
 
-st.set_page_config(layout="wide")
-df = st.session_state["df"].copy()
-anni_disponibili = df["ANNO"].unique().astype(int).tolist()
-df_Form = st.session_state["df_Form"].copy()
-dizionarioVolontari = st.session_state["dizionarioVolontari"].copy()
-#filtri
-render_filter_anno(anni_disponibili)
-filtroAnno = get_filter_anno()
-df = filtra_df(df, filtroAnno)
-Anno_selezionato = str(filtroAnno["ANNO"])
-st.session_state["Anno_selezionato"] = Anno_selezionato
-
-st.sidebar.text("Made with ❤ by Recup")
 
 df_Form["Data del Mercato"] = pd.to_datetime(df_Form["Data del Mercato"], dayfirst=True, errors="coerce")
 df_form_2025 = df_Form[df_Form["Data del Mercato"].dt.year == 2025]
@@ -113,28 +114,41 @@ massimo_mercato = totali.idxmax()
 
 with tab1:
     total = round(float(df["KG"].sum()))
-    st.markdown(f"## 📅 Anno: {Anno_selezionato}")
     st.markdown("""
                     <style>
+                    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700&family=Space+Grotesk:wght@700&display=swap');
                     .kpi-card {
-                        background: #111;
-                        padding: 16px 20px;
-                        border-radius: 14px;
+                        background: linear-gradient(135deg, #0d1f1a 0%, #0a1a14 100%);
+                        border: 1px solid #1a3a2a;
+                        padding: 1.2rem 2rem;
+                        border-radius: 16px;
                         text-align: center;
-                        box-shadow: 0 0 12px rgba(0,0,0,0.4);
+                        max-width: 680px;
+                        font-family: 'DM Sans', sans-serif;
                     }
                     .kpi-title {
-                        font-size: 16px;
-                        color: #bbbbbb;
+                        color: #8a9ba8;
+                        font-size: 1rem;         
+                        letter-spacing: 0.1em;
+                        text-transform: uppercase;
+                        margin-bottom: 0.3rem;
+                        font-family: 'DM Sans', sans-serif;
+                        font-weight: 400;
+
                     }
                     .kpi-value {
-                        font-size: 22px;
+                        color: #FFD700;
+                        font-size: 1.5rem;
                         font-weight: 700;
-                        color: #00ff9c;
+                        line-height: 1;
+                        font-family: 'Space Grotesk', sans-serif;
                     }
                     .kpi-icon {
-                        font-size: 22px;
+                        font-size: 2rem;
+                        line-height: 1;
+                        margin-bottom: 0.3rem;
                     }
+
                     </style>
                     """, unsafe_allow_html=True)
     col2, col3, col4 = st.columns(3)
@@ -159,7 +173,7 @@ with tab1:
     with col4:
         st.markdown(f"""
                         <div class="kpi-card">
-                            <div class="kpi-icon">🌱</div>
+                            <div class="kpi-icon">🥕</div>
                             <div class="kpi-title">Recupero massimo singolo mercato</div>
                             <div class="kpi-value">{massimo_recupero} kg</div>
                         </div>
@@ -224,29 +238,7 @@ with tab2:
     massimo_giorno_kili = round(max(somma_mercati_2025["KG"]), 1)
     massimo_giorno = (somma_mercati_2025.loc[somma_mercati_2025['KG'].idxmax(), 'SETTIMANA']).strftime('%d/%m')
     st.markdown(f"## 📅 Anno: {Anno_selezionato}")
-    st.markdown("""
-                        <style>
-                        .kpi-card {
-                            background: #111;
-                            padding: 16px 20px;
-                            border-radius: 14px;
-                            text-align: center;
-                            box-shadow: 0 0 12px rgba(0,0,0,0.4);
-                        }
-                        .kpi-title {
-                            font-size: 20px;
-                            color: #bbbbbb;
-                        }
-                        .kpi-value {
-                            font-size: 26px;
-                            font-weight: 700;
-                            color: #00ff9c;
-                        }
-                        .kpi-icon {
-                            font-size: 26px;
-                        }
-                        </style>
-                        """, unsafe_allow_html=True)
+
     col2, col3 = st.columns(2)
 
     with col2:
