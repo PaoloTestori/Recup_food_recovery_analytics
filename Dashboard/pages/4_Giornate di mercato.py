@@ -113,10 +113,6 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 tabconfrontomercatigiornate, tabfocusalimentigiornate = st.tabs(["Focus Totali", "Focus Mercati"])
 
-#df = pd.read_csv(    filepath_or_buffer= wbUrl,    header=0,    usecols=[0,1,2,3],    parse_dates=[0],    skiprows=[1],)
-#lettura file form google
-#df_Form = pd.read_csv(    filepath_or_buffer= st.secrets["WEBHOOK_URL_MERCATI_RISPOSTE"],    usecols=[0,1,2,3,5,6],    parse_dates=[1],    skiprows=[0],)
-
 df_Form["Data del Mercato"] = pd.to_datetime(df_Form["Data del Mercato"], dayfirst=True, errors="coerce")
 df_form_2025 = df_Form[df_Form["Data del Mercato"].dt.year == 2025]
 df_form_2025 = df_form_2025.reset_index(drop=True)
@@ -293,25 +289,39 @@ else:
     with tabconfrontomercatigiornate:
         st.markdown("""
                         <style>
-                        .kpi-card {
-                            background: #111;
-                            padding: 16px 20px;
-                            border-radius: 14px;
-                            text-align: center;
-                            box-shadow: 0 0 12px rgba(0,0,0,0.4);
-                        }
-                        .kpi-title {
-                            font-size: 16px;
-                            color: #bbbbbb;
-                        }
-                        .kpi-value {
-                            font-size: 22px;
-                            font-weight: 700;
-                            color: #00ff9c;
-                        }
-                        .kpi-icon {
-                            font-size: 22px;
-                        }
+                   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700&family=Space+Grotesk:wght@700&display=swap');
+                    .kpi-card {
+                        background: linear-gradient(135deg, #0d1f1a 0%, #0a1a14 100%);
+                        border: 1px solid #1a3a2a;
+                        padding: 1.2rem 2rem;
+                        border-radius: 16px;
+                        text-align: center;
+                        max-width: 680px;
+                        font-family: 'DM Sans', sans-serif;
+                    }
+                    .kpi-title {
+                        color: #8a9ba8;
+                        font-size: 0.9rem;         
+                        letter-spacing: 0.1em;
+                        text-transform: uppercase;
+                        margin-bottom: 0.3rem;
+                        font-family: 'DM Sans', sans-serif;
+                        font-weight: 400;
+
+                    }
+                    .kpi-value {
+                        color: #FFD700;
+                        font-size: 1.2rem;
+                        font-weight: 700;
+                        line-height: 1;
+                        font-family: 'Space Grotesk', sans-serif;
+                    }
+                    .kpi-icon {
+                        font-size: 2rem;
+                        line-height: 1;
+                        margin-bottom: 0.3rem;
+                    }
+
                         </style>
                         """, unsafe_allow_html=True)
         col2, col3, col4, col5, col6 = st.columns(5)
@@ -517,29 +527,7 @@ with tabfocusalimentigiornate:
         chiave = merc  + "_" + data_mercato_corrente
         tabella_mercato = (tabella_mercato.drop(columns=["DATA", "MESE", "ANNO"])).groupby("ITEM").sum()[["KG"]].reset_index()
         alimento_pi_recuperato = tabella_mercato["ITEM"].iloc[tabella_mercato["KG"].idxmax()]
-        st.markdown("""
-                <style>
-                .kpi-card {
-                    background: #111;
-                    padding: 16px 20px;
-                    border-radius: 14px;
-                    text-align: center;
-                    box-shadow: 0 0 12px rgba(0,0,0,0.4);
-                }
-                .kpi-title {
-                    font-size: 16px;
-                    color: #bbbbbb;
-                }
-                .kpi-value {
-                    font-size: 22px;
-                    font-weight: 700;
-                    color: #00ff9c;
-                }
-                .kpi-icon {
-                    font-size: 22px;
-                }
-                </style>
-                """, unsafe_allow_html=True)
+
         col2, col3, col4, col5, col6 = st.columns(5)
 
         with col2:
@@ -554,7 +542,7 @@ with tabfocusalimentigiornate:
             st.markdown(f"""
                      <div class="kpi-card">
                          <div class="kpi-icon">👥</div>
-                         <div class="kpi-title">Volontari</div>
+                         <div class="kpi-title">Volontari medi</div>
                          <div class="kpi-value">{numero_volontari_mercato_corrente}</div>
                      </div>
                      """, unsafe_allow_html=True)
@@ -562,7 +550,7 @@ with tabfocusalimentigiornate:
             st.markdown(f"""
                      <div class="kpi-card">
                          <div class="kpi-icon">🤝</div>
-                         <div class="kpi-title">Beneficiari</div>
+                         <div class="kpi-title">Beneficiari medi</div>
                          <div class="kpi-value">{numero_beneficiari_mercato_corrente}</div>
                      </div>
                      """, unsafe_allow_html=True)

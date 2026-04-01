@@ -44,7 +44,9 @@ render_filter_anno(anni_disponibili)
 filtroAnno = get_filter_anno()
 df = filtra_df_anno(df, filtroAnno)
 st.session_state["Anno_selezionato"] = Anno_selezionato
-
+st.markdown(f"""
+<h1 style='margin-bottom:0;'>📅 Anno {filtroAnno["ANNO"]}</h1>
+""", unsafe_allow_html=True)
 tabconfronti, tabanalisitemporali, tabvolontari = st.tabs(["Andamento Mercati", "Analisi Temporali","Andamento Volontari"])
 st.markdown("""
 <style>
@@ -69,14 +71,6 @@ button[data-baseweb="tab"][aria-selected="true"] {
 
 st.sidebar.text("Made with ❤ by Recup")
 
-# Percorso del file JSON del service account
-#creds = service_account.Credentials.from_service_account_info(    st.secrets["gcp_service_account"])
-
-# Apertura client
-#client = gspread.authorize(creds)
-#lettura file mercati 2025
-#wbUrl = st.secrets["WEBHOOK_URL_MERCATI2025"]
-
 giornate_di_mercato = {
     "MOMPIANI" : 1,
     "MARTINI" : 2,
@@ -94,9 +88,6 @@ giornate_di_mercato = {
     "ESTERLE": 5
 }
 
-#df = pd.read_csv(filepath_or_buffer= wbUrl,header=0,usecols=[0,1,2,3],parse_dates=[0],skiprows=[1],)
-#lettura file form google
-#df_Form = pd.read_csv(filepath_or_buffer= st.secrets["WEBHOOK_URL_MERCATI_RISPOSTE"],usecols=[0,1,2,3,5,6],parse_dates=[1], skiprows=[0],)
 
 df_Form["Data del Mercato"] = pd.to_datetime(df_Form["Data del Mercato"], dayfirst=True, errors="coerce")
 df_form_2025 = df_Form[df_Form["Data del Mercato"].dt.year.isin([2024, 2025])]
@@ -224,7 +215,7 @@ with tabconfronti:
                 df_grafico_mercato_selezionato_filtrato = df_grafico_mercato_selezionato[df_grafico_mercato_selezionato["DATA"].dt.weekday == giornate_di_mercato[mercato]]
                 media = round(float(df_grafico_mercato_selezionato_filtrato[mercato][df_grafico_mercato_selezionato_filtrato[mercato] != 0].mean()), 2)
                 max_mercato = df_grafico_mercato_selezionato_filtrato[mercato].max()
-                giorno_max_mercato = (df_grafico_mercato_selezionato_filtrato["DATA"][df_grafico_mercato_selezionato_filtrato[mercato].idxmax()]).date()
+                giorno_max_mercato = (df_grafico_mercato_selezionato_filtrato["DATA"][df_grafico_mercato_selezionato_filtrato[mercato].idxmax()]).date().strftime("%d/%m/%Y")
                 #st.markdown(f"<p style='font-size:20px'><b>🥬 Il giorno in cui abbiamo recuperato di più è stato il {giorno_max_mercato} con {max_mercato} KG</b></p>", unsafe_allow_html=True)
                 df_scostamento = df_grafico_mercato_selezionato_filtrato.merge(df_media_mercati_2025[["SETTIMANA", "KG"]], left_on="DATA", right_on="SETTIMANA", how="left")
                 df_scostamento["Scostamento"] = ((df_scostamento[mercato]-df_scostamento["KG"])/df_scostamento["KG"])*100
@@ -235,22 +226,38 @@ with tabconfronti:
 
                 st.markdown("""
                 <style>
-                .kpi-card {
-                    background: #111;
-                    padding: 16px 20px;
-                    border-radius: 14px;
-                    text-align: center;
-                    box-shadow: 0 0 12px rgba(0,0,0,0.4);
-                }
-                .kpi-title {
-                    font-size: 14px;
-                    color: #bbbbbb;
-                }
-                .kpi-value {
-                    font-size: 28px;
-                    font-weight: 700;
-                    color: #00ff9c;
-                }
+                    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700&family=Space+Grotesk:wght@700&display=swap');
+                    .kpi-card {
+                        background: linear-gradient(135deg, #0d1f1a 0%, #0a1a14 100%);
+                        border: 1px solid #1a3a2a;
+                        padding: 1.2rem 2rem;
+                        border-radius: 16px;
+                        text-align: center;
+                        max-width: 680px;
+                        font-family: 'DM Sans', sans-serif;
+                    }
+                    .kpi-title {
+                        color: #8a9ba8;
+                        font-size: 1rem;         
+                        letter-spacing: 0.1em;
+                        text-transform: uppercase;
+                        margin-bottom: 0.3rem;
+                        font-family: 'DM Sans', sans-serif;
+                        font-weight: 400;
+
+                    }
+                    .kpi-value {
+                        color: #FFD700;
+                        font-size: 1.5rem;
+                        font-weight: 700;
+                        line-height: 1;
+                        font-family: 'Space Grotesk', sans-serif;
+                    }
+                    .kpi-icon {
+                        font-size: 2rem;
+                        line-height: 1;
+                        margin-bottom: 0.3rem;
+                    }
                 .header-title {
                     font-size: 42px;
                     font-weight: 700;
@@ -265,7 +272,6 @@ with tabconfronti:
                 st.markdown(f"""
                 <div style="margin-bottom:20px;">
                   <div class="header-title">📍 {mercato}</div>
-                  <div class="header-subtitle">📅 Analisi recupero</div>
                 </div>
                 """, unsafe_allow_html=True)
 
@@ -297,7 +303,7 @@ with tabconfronti:
                     rows=2, cols=1,
                     shared_xaxes=True,
                     vertical_spacing=0.08,
-                    subplot_titles=("KG recuperati vs Media mercati", "Z-score (scostamento standardizzato)")
+                    subplot_titles=("", "Z-score (scostamento standardizzato)")
                 )
                 # --- PANNELLO 1 ---
                 figSubplot.add_trace(
@@ -370,22 +376,6 @@ with tabconfronti:
                 media = round(float(df_grafico_mercato_selezionato_filtrato[mercato][df_grafico_mercato_selezionato_filtrato[mercato] != 0].mean()), 2)
                 st.markdown("""
                 <style>
-                .kpi-card {
-                    background: #111;
-                    padding: 16px 20px;
-                    border-radius: 14px;
-                    text-align: center;
-                    box-shadow: 0 0 12px rgba(0,0,0,0.4);
-                }
-                .kpi-title {
-                    font-size: 16px;
-                    color: #bbbbbb;
-                }
-                .kpi-value {
-                    font-size: 26px;
-                    font-weight: 700;
-                    color: #00ff9c;
-                }
                 .header-title {
                     font-size: 42px;
                     font-weight: 700;
@@ -400,7 +390,6 @@ with tabconfronti:
                 st.markdown(f"""
                 <div style="margin-bottom:20px;">
                   <div class="header-title">📍 {mercato}</div>
-                  <div class="header-subtitle">📅 Analisi andamento medio</div>
                 </div>
                 """, unsafe_allow_html=True)
                 # ===== KPI ROW =====
