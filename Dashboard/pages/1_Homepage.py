@@ -1,8 +1,6 @@
-
 import plotly.express as px
 import pandas as pd
 import streamlit as st
-import plotly.graph_objects as go
 
 st.set_page_config(page_title="Homepage",
                    page_icon="🍌",
@@ -36,14 +34,6 @@ button[data-baseweb="tab"][aria-selected="true"] {
 </style>
 """, unsafe_allow_html=True)
 
-# Percorso del file JSON del service account
-
-#creds = service_account.Credentials.from_service_account_info(st.secrets["gcp_service_account"])
-
-
-# Apertura client
-#client = gspread.authorize(creds)
-#lettura file mercati 2025/2026
 wbUrl = st.secrets["WEBHOOK_URL_MERCATI2025"]
 wbUrl2026 = st.secrets["WEBHOOK_URL_MERCATI2026"]
 wbUrl2024 = st.secrets["WEBHOOK_URL_MERCATI2024"]
@@ -80,7 +70,6 @@ df_2023 = pd.read_csv(
     parse_dates=[0],
     skiprows=[1],
 )
-#lettura file form google
 df_Form = pd.read_csv(
     filepath_or_buffer= st.secrets["WEBHOOK_URL_MERCATI_RISPOSTE"],
     usecols=[0,1,2,3,4,5,6],
@@ -110,7 +99,6 @@ for row2026 in df_2026.iterrows():
 df_Form["Data del Mercato"] = pd.to_datetime(df_Form["Data del Mercato"], dayfirst=True, errors="coerce")
 df_form_2025 = df_Form[df_Form["Data del Mercato"].dt.year.isin([2024, 2025])]
 df_form_2025 = df_form_2025.reset_index(drop=True)
-#gestione numero volontari
 df_form_2025["Inserisci NOME e COGNOME dellə volontariə presenti"] = df_form_2025["Inserisci NOME e COGNOME dellə volontariə presenti"].str.replace(";", ",").str.replace(".", ",").str.replace("-",",").str.replace("/",",").str.replace(" e ",",")
 df_form_2025["Numero volontari"] = 0
 
@@ -131,7 +119,6 @@ for idx, vol in df_form_2025["Inserisci NOME e COGNOME dellə volontariə presen
         dizionarioVolontari[str.upper(df_form_2025["Nome del Mercato"][idx]) + "_" + (df_form_2025["Data del Mercato"][idx].strftime("%d/%m/%Y"))] = numeroVolontari
 
 for idx, ben in df_form_2025["Quantə beneficiariə? (inserisci un numero)"].items():
-    #st.write(ben)
     if str(ben).strip() in ["", "-", ".", "Nessuna", "Nessuno", "nessuna", "nessuno"]:
         continue
     dizionarioBeneficiari[str.upper(df_form_2025["Nome del Mercato"][idx]) + "_" + (
@@ -141,12 +128,9 @@ st.session_state["dizionarioVolontari"] = dizionarioVolontari
 st.session_state["dizionarioBeneficiari"] = dizionarioBeneficiari
 idx = 0
 df["DATA"] = pd.to_datetime(df["DATA"],  format="mixed", dayfirst=True, errors="coerce")
-#df["KG"] = df["KG"].str.replace(",", ".",regex=False).astype(float)
-#df["Numero Volontari"] = 0
 
 for idx, row in df.iterrows():
     chiave = str.upper(df["MERCATO"][idx]) + "_" + df["DATA"][idx].strftime("%d/%m/%Y")
-    #st.write(chiave)
     if chiave in dizionarioVolontari:
         df["NUMERO VOLONTARI"][idx] = dizionarioVolontari[str.upper(df["MERCATO"][idx]) + "_" + df["DATA"][idx].strftime("%d/%m/%Y")]
     else:

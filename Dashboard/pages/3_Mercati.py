@@ -1,12 +1,9 @@
-import gspread
 import numpy as np
-from google.oauth2 import service_account
 from sklearn.metrics import r2_score
 import pandas as pd
 import streamlit as st
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-#importo components
 import importlib.util
 import os
 
@@ -19,7 +16,6 @@ spec.loader.exec_module(filters)
 render_filter_anno = filters.render_filter_anno
 get_filter_anno = filters.get_filter_anno
 
-#importo utils\filtro_anno.py
 spec = importlib.util.spec_from_file_location(
     "Anno",
     os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'utils', 'filtro_anno.py'))
@@ -27,7 +23,6 @@ spec = importlib.util.spec_from_file_location(
 Anno = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(Anno)
 filtra_df_anno = Anno.filtra_df
-
 
 st.set_page_config(page_title="Mercati Milano",
                    page_icon="📍",
@@ -95,41 +90,15 @@ giornate_di_mercato = {
 df_Form["Data del Mercato"] = pd.to_datetime(df_Form["Data del Mercato"], dayfirst=True, errors="coerce")
 df_form_2025 = df_Form[df_Form["Data del Mercato"].dt.year.isin([2024, 2025])]
 df_form_2025 = df_form_2025.reset_index(drop=True)
-#gestione numero volontari
 df_form_2025["Inserisci NOME e COGNOME dellə volontariə presenti"] = df_form_2025["Inserisci NOME e COGNOME dellə volontariə presenti"].str.replace(";", ",").str.replace(".", ",").str.replace("-",",").str.replace("/",",").str.replace(" e ",",")
 df_form_2025["Numero volontari"] = 0
 df_form_2025["Quantə beneficiariə? (inserisci un numero)"] = df_form_2025["Quantə beneficiariə? (inserisci un numero)"].replace("-",0)
-#dizionarioVolontari = {}
-#dizionarioBeneficiari = {}
-
-#for idx, ben in df_form_2025["Quantə beneficiariə? (inserisci un numero)"].items():
-#    if ben is "":
-#        continue
-#    dizionarioBeneficiari[str.upper(df_form_2025["Nome del Mercato"][idx]) + "_" + (
-#        df_form_2025["Data del Mercato"][idx].strftime("%d/%m/%Y"))] = int(df_form_2025["Quantə beneficiariə? (inserisci un numero)"][idx])
-
-#for idx, vol in df_form_2025["Inserisci NOME e COGNOME dellə volontariə presenti"].items():
-#    if vol is "No Data":
-#        continue
-#    if "," in vol:
-#        listaVolontari = str.split(vol,",")
-#        listaVolontari = list(filter(None, listaVolontari))
-#        numeroVolontari = int(len(listaVolontari))
-#        dizionarioVolontari[str.upper(df_form_2025["Nome del Mercato"][idx]) + "_" + (df_form_2025["Data del Mercato"][idx].strftime("%d/%m/%Y"))] = numeroVolontari
-#    else:
-#        vol = vol.replace(" de "," de_").replace(" di "," di_").replace(" del "," del_").replace(" da "," da_").replace(" dal ","dal_").replace(" lo ","lo_").replace(" la ","la_")
-#        listaVolontari = str.split(vol, " ")
-#        listaVolontari = list(filter(None, listaVolontari))
-#        numeroVolontari = int(len(listaVolontari)/2)
-#        dizionarioVolontari[str.upper(df_form_2025["Nome del Mercato"][idx]) + "_" + (df_form_2025["Data del Mercato"][idx].strftime("%d/%m/%Y"))] = numeroVolontari
 idx = 0
 df["DATA"] = pd.to_datetime(df["DATA"],  format="mixed", dayfirst=True, errors="coerce")
-#df["KG"] = df["KG"].str.replace(",", ".",regex=False).astype(float)
 df["Numero Volontari"] = 0
 df["Numero Beneficiari"] = 0
 for idx, row in df.iterrows():
     chiave = str.upper(df["MERCATO"][idx]) + "_" + df["DATA"][idx].strftime("%d/%m/%Y")
-    #st.write(chiave)
     if chiave in dizionarioVolontari:
         df["Numero Volontari"][idx] = dizionarioVolontari[str.upper(df["MERCATO"][idx]) + "_" + df["DATA"][idx].strftime("%d/%m/%Y")]
     else:
@@ -143,14 +112,12 @@ idx = 0
 
 df_media_mercati_2025 = df
 df_media_mercati_2025["SETTIMANA"] = df_media_mercati_2025["DATA"].dt.to_period("W").dt.start_time
-#df["SETTIMANA"] = df["DATA"] - df["MERCATO"].map(giornate_di_mercato).apply(lambda x: pd.Timedelta(days=x))
 df_media_mercati_2025 = (
     (df_media_mercati_2025.groupby(["SETTIMANA", "MERCATO"])["KG"].sum().reset_index()).groupby("SETTIMANA")[
         "KG"].mean()).reset_index()
 df = df.drop(columns=["SETTIMANA"])
 df_std_mercati_2025 = df
 df_std_mercati_2025["SETTIMANA"] = df_std_mercati_2025["DATA"].dt.to_period("W").dt.start_time
-#df["SETTIMANA"] = df["DATA"] - df["MERCATO"].map(giornate_di_mercato).apply(lambda x: pd.Timedelta(days=x))
 df_std_mercati_2025 = (
     (df_std_mercati_2025.groupby(["SETTIMANA", "MERCATO"])["KG"].sum().reset_index()).groupby("SETTIMANA")[
         "KG"].std()).reset_index()
@@ -207,11 +174,9 @@ with tabconfronti:
                         "SETTIMANA")[
                         "KG"].std()).reset_index()
                 df = df.drop(columns=["SETTIMANA"])
-                #st.title("🍌" + mercato)
                 total_df = df.groupby("MERCATO")["KG"].sum().reset_index()
                 total_dict = dict(zip(total_df["MERCATO"], total_df["KG"]))
                 total =round(float(total_dict[mercato]), 2)
-                #st.markdown(f"<p style='font-size:30px'><b>🥦 Nel 2025 a {mercato} abbiamo recuperato ben {total} KG </b></p>", unsafe_allow_html=True)
                 fig = go.Figure()
                 df_media_mercati_2025["SETTIMANA"] += pd.Timedelta(days=giornate_di_mercato[mercato])
                 df_std_mercati_2025["SETTIMANA"] += pd.Timedelta(days=giornate_di_mercato[mercato])
@@ -219,7 +184,6 @@ with tabconfronti:
                 media = round(float(df_grafico_mercato_selezionato_filtrato[mercato][df_grafico_mercato_selezionato_filtrato[mercato] != 0].mean()), 2)
                 max_mercato = df_grafico_mercato_selezionato_filtrato[mercato].max()
                 giorno_max_mercato = (df_grafico_mercato_selezionato_filtrato["DATA"][df_grafico_mercato_selezionato_filtrato[mercato].idxmax()]).date().strftime("%d/%m/%Y")
-                #st.markdown(f"<p style='font-size:20px'><b>🥬 Il giorno in cui abbiamo recuperato di più è stato il {giorno_max_mercato} con {max_mercato} KG</b></p>", unsafe_allow_html=True)
                 df_scostamento = df_grafico_mercato_selezionato_filtrato.merge(df_media_mercati_2025[["SETTIMANA", "KG"]], left_on="DATA", right_on="SETTIMANA", how="left")
                 df_scostamento["Scostamento"] = ((df_scostamento[mercato]-df_scostamento["KG"])/df_scostamento["KG"])*100
                 df_scostamento = df_scostamento.merge(df_std_mercati_2025[["SETTIMANA", "KG"]], left_on="DATA", right_on="SETTIMANA", how="left")
@@ -480,7 +444,6 @@ with tabconfronti:
                 )
                 st.plotly_chart(fig, use_container_width=True)
 
-#grafico con volontari
 with tabvolontari:
     for mercato in df_grafico_mercato_selezionato.columns:
         if mercato != "DATA" and mercato != "PADERNO DUGNANO":
@@ -535,12 +498,6 @@ with tabvolontari:
             }
             </style>
             """, unsafe_allow_html=True)
-#            st.markdown(f"""<div class="card-info">
-#                <h2>️📍 {mercato}</h2>
-#                <p>👥 Volontari medi per giornata: <span>{media_volontari_mercato_corrente}</span></p>
-#                <p>🤝 Beneficiari raggiunti: <span>{media_beneficiari_mercato_corrente}</span></p>
-#            </div>
-#            """, unsafe_allow_html=True)
             figVolontariScatter = go.Figure()
             figVolontariScatter.add_trace(
                 go.Scatter(
