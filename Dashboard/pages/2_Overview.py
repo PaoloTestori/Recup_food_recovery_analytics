@@ -1,12 +1,9 @@
-import gspread
 import plotly.express as px
 import pandas as pd
-from google.oauth2 import service_account
 import numpy as np
 import streamlit as st
 import plotly.graph_objects as go
 from sklearn.metrics import r2_score
-#importo components
 import importlib.util
 import os
 
@@ -19,7 +16,6 @@ spec.loader.exec_module(filters)
 render_filter_anno = filters.render_filter_anno
 get_filter_anno = filters.get_filter_anno
 
-#importo utils\filtro_anno.py
 spec = importlib.util.spec_from_file_location(
     "Anno",
     os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'utils', 'filtro_anno.py'))
@@ -73,34 +69,15 @@ button[data-baseweb="tab"][aria-selected="true"] {
 df_Form["Data del Mercato"] = pd.to_datetime(df_Form["Data del Mercato"], dayfirst=True, errors="coerce")
 df_form_2025 = df_Form[df_Form["Data del Mercato"].dt.year == 2025]
 df_form_2025 = df_form_2025.reset_index(drop=True)
-#gestione numero volontari
 df_form_2025["Inserisci NOME e COGNOME dellə volontariə presenti"] = df_form_2025["Inserisci NOME e COGNOME dellə volontariə presenti"].str.replace(";", ",").str.replace(".", ",").str.replace("-",",").str.replace("/",",").str.replace(" e ",",")
 df_form_2025["Numero volontari"] = 0
-#dizionarioVolontari = {}
-#for idx, vol in df_form_2025["Inserisci NOME e COGNOME dellə volontariə presenti"].items():
-#    if vol is "No Data":
-#        continue
-#    if "," in vol:
-#        listaVolontari = str.split(vol,",")
-#        listaVolontari = list(filter(None, listaVolontari))
-#        numeroVolontari = int(len(listaVolontari))
-#        dizionarioVolontari[str.upper(df_form_2025["Nome del Mercato"][idx]) + "_" + (df_form_2025["Data del Mercato"][idx].strftime("%d/%m/%Y"))] = numeroVolontari
-#    else:
-#        vol = vol.replace(" de "," de_").replace(" di "," di_").replace(" del "," del_").replace(" da "," da_").replace(" dal ","dal_").replace(" lo ","lo_").replace(" la ","la_")
-#        listaVolontari = str.split(vol, " ")
-#        listaVolontari = list(filter(None, listaVolontari))
-#        numeroVolontari = int(len(listaVolontari)/2)
- #       dizionarioVolontari[str.upper(df_form_2025["Nome del Mercato"][idx]) + "_" + (df_form_2025["Data del Mercato"][idx].strftime("%d/%m/%Y"))] = numeroVolontari
 
 idx = 0
 df["DATA"] = pd.to_datetime(df["DATA"],  format="mixed", dayfirst=True, errors="coerce")
-#df["KG"] = df["KG"].str.replace(",", ".",regex=False).astype(float)
 df["Numero Volontari"] = 0
-#dizionarioVolontari = {}
 
 for idx, row in df.iterrows():
     chiave = str.upper(df["MERCATO"][idx]) + "_" + df["DATA"][idx].strftime("%d/%m/%Y")
-    #st.write(chiave)
     if chiave in dizionarioVolontari:
         df["Numero Volontari"][idx] = dizionarioVolontari[str.upper(df["MERCATO"][idx]) + "_" + df["DATA"][idx].strftime("%d/%m/%Y")]
     else:
@@ -178,7 +155,6 @@ with tab1:
                             <div class="kpi-value">{massimo_recupero} kg</div>
                         </div>
                         """, unsafe_allow_html=True)
-    #st.markdown("<br><br>", unsafe_allow_html=True)
     grafico_mercati_2025 = px.bar(
         mercati_2025,
         x="KG",
@@ -257,7 +233,6 @@ with tab2:
                                 <div class="kpi-value">{massimo_giorno_kili} kg</div>
                             </div>
                             """, unsafe_allow_html=True)
-    #st.markdown("<br><br>", unsafe_allow_html=True)
 
     fig.add_trace(
         go.Scatter(
