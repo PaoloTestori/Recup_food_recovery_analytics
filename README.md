@@ -119,24 +119,36 @@ The ETL pipeline handles:
 ```
 recup-food-recovery-analytics
 │
+├── Dashboard/
+│   ├── components/
+│   │   └── filters.py
+│   ├── pages/
+│   │   ├── 1_Homepage.py
+│   │   ├── 2_Overview.py
+│   │   ├── 3_Mercati.py
+│   │   └── 4_Giornate di mercato.py
+│   ├── utils/
+│   │   ├── filtro_anno.py
+│   │   ├── filtro_giorno.py
+│   │   └── filtro_mese.py
+│   ├── app.py
+│
 ├── etl/
 │   ├── extract.py
 │   ├── transform.py
 │   ├── load.py
 │   └── run_pipeline.py
-│
+
 ├── src/
-│   └── food_parser.py
-│
-├── dashboard/
-│   └── app.py
+│   ├── food_parser.py
+│   └── is_convertible_to_date.py
 │
 ├── examples/
-│   └── sample_input.txt
+│   ├── sample_output.csv
+│   └── sample_input.csv
 │
 ├── requirements.txt
 ├── README.md
-└── .gitignore
 ```
 
 ### ETL (`etl/`)
