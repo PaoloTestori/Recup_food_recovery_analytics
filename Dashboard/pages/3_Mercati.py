@@ -38,12 +38,15 @@ anni_disponibili = df["ANNO"].unique().astype(int).tolist()
 df_Form = st.session_state["df_Form"].copy()
 dizionarioVolontari = st.session_state["dizionarioVolontari"].copy()
 dizionarioBeneficiari = st.session_state["dizionarioBeneficiari"].copy()
-Anno_selezionato = st.session_state["Anno_selezionato"]
+if "anno" not in st.session_state:
+    st.session_state["Anno_selezionato"] = 2026
+else:
+    Anno_selezionato = st.session_state["Anno_selezionato"]
 #filtri
 render_filter_anno(anni_disponibili)
 filtroAnno = get_filter_anno()
 df = filtra_df_anno(df, filtroAnno)
-st.session_state["Anno_selezionato"] = Anno_selezionato
+
 st.markdown(f"""
 <h1 style='margin-bottom:0;'>📅 Anno {filtroAnno["ANNO"]}</h1>
 """, unsafe_allow_html=True)
