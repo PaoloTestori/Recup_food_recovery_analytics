@@ -147,8 +147,9 @@ ordine_mesi = [
     "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
     "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"
 ]
-
 df["MESE"] = pd.Categorical(df["MESE"], categories=ordine_mesi, ordered=True)
+df["MESE_NUM"] = df["DATA"].dt.month
+df = df.sort_values("MESE_NUM")
 df_grafico_confronto_anni = df.groupby(["ANNO", "MESE"])["KG"].sum().reset_index()
 mercati_anni = df.groupby('ANNO')['KG'].sum().reset_index()
 mercati_anni["ANNO"] = mercati_anni["ANNO"].astype(str)
