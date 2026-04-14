@@ -150,7 +150,7 @@ ordine_mesi = [
 df["MESE"] = pd.Categorical(df["MESE"], categories=ordine_mesi, ordered=True)
 df["MESE_NUM"] = df["DATA"].dt.month
 df = df.sort_values("MESE_NUM")
-df_grafico_confronto_anni = df.groupby(["ANNO", "MESE"])["KG"].sum().reset_index()
+df_grafico_confronto_anni = df.groupby(["ANNO", "MESE_NUM"])["KG"].sum().reset_index()
 mercati_anni = df.groupby('ANNO')['KG'].sum().reset_index()
 mercati_anni["ANNO"] = mercati_anni["ANNO"].astype(str)
 totali = mercati_anni.groupby("ANNO")["KG"].sum()
@@ -267,7 +267,7 @@ grafico_mercati_anni.update_layout(
 
 grafico_confronto_anni = px.line(
     df_grafico_confronto_anni,
-    x="MESE",
+    x="MESE_NUM",
     y="KG",
     color="ANNO",
     title="Confronto Anni",
@@ -282,6 +282,14 @@ grafico_confronto_anni.update_layout(
     title_font_size=20,
     title_x=0.5,
     title_xanchor="center",
+)
+grafico_confronto_anni.update_xaxes(
+    tickmode="array",
+    tickvals=list(range(1, 13)),
+    ticktext=[
+        "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
+        "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"
+    ]
 )
 st.plotly_chart(grafico_mercati_anni, use_container_width=True)
 st.plotly_chart(grafico_confronto_anni, use_container_width=True)
