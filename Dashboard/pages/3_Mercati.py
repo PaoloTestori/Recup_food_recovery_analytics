@@ -45,7 +45,7 @@ df = filtra_df_anno(df, filtroAnno)
 st.markdown(f"""
 <h1 style='margin-bottom:0;'>📅 Anno {filtroAnno["ANNO"]}</h1>
 """, unsafe_allow_html=True)
-tabconfronti, tabanalisitemporali, tabvolontari = st.tabs(["Andamento Mercati", "Analisi Temporali","Andamento Volontari"])
+tabconfronti, tabanalisitemporali = st.tabs(["Andamento Mercati", "Analisi Temporali"])
 st.markdown("""
 <style>
 button[data-baseweb="tab"] {
@@ -444,109 +444,5 @@ with tabconfronti:
                 )
                 st.plotly_chart(fig, use_container_width=True)
 
-with tabvolontari:
-    for mercato in df_grafico_mercato_selezionato.columns:
-        if mercato != "DATA" and mercato != "PADERNO DUGNANO":
-            df_grafico_mercato_selezionato_filtrato = df_grafico_mercato_selezionato[df_grafico_mercato_selezionato["DATA"].dt.weekday == giornate_di_mercato[mercato]].reset_index(drop=True)
-            df_volontari_mercato_selezionato_filtrato = df_volontari_mercato_selezionato.reset_index()[df_volontari_mercato_selezionato.reset_index()["DATA"].dt.weekday == giornate_di_mercato[mercato]].reset_index(drop=True)
-            df_beneficiari_mercato_selezionato_filtrato = df_beneficiari_mercato_selezionato.reset_index()[df_beneficiari_mercato_selezionato.reset_index()["DATA"].dt.weekday == giornate_di_mercato[mercato]].reset_index(drop=True)
-            df_volontari_mercato_corrente = pd.merge(
-                df_grafico_mercato_selezionato_filtrato[["DATA", mercato]],
-                df_volontari_mercato_selezionato[[mercato]],
-                left_on="DATA",
-                right_index=True,
-                how="inner"
-            )
-            df_beneficiari_mercato_corrente = pd.merge(
-                df_grafico_mercato_selezionato_filtrato[["DATA", mercato]],
-                df_beneficiari_mercato_selezionato[[mercato]],
-                left_on="DATA",
-                right_index=True,
-                how="inner"
-            )
-            df_clean = df_volontari_mercato_corrente[(df_volontari_mercato_corrente[mercato + "_x"] > 0) &
-                                (df_volontari_mercato_corrente[mercato + "_y"] > 0)]
-            corr = round(df_clean[mercato + "_x"].corr(df_clean[mercato + "_y"], method="spearman"), 2)
-            media_volontari_mercato_corrente = round(df_clean[mercato + "_y"].mean())
-            df_clean = df_beneficiari_mercato_corrente[(df_beneficiari_mercato_corrente[mercato + "_x"] > 0) &
-                                (df_beneficiari_mercato_corrente[mercato + "_y"] > 0)]
-            media_beneficiari_mercato_corrente = round(df_clean[mercato + "_y"].mean())
-            st.markdown("""
-            <style>
-            .card-info {
-                background: linear-gradient(135deg, #111111, #1a1a1a);
-                border-radius: 14px;
-                padding: 18px 22px;
-                margin-bottom: 16px;
-                box-shadow: 0 0 18px rgba(100, 200, 255, 0.12);
-            }
-
-            .card-info h2 {
-                font-size: 42px;
-                margin: 0 0 10px 0;
-                color: white;
-                font-weight: 700;
-            }
-
-            .card-info p {
-                font-size: 18px;
-                margin: 6px 0;
-                color: #ddd;
-            }
-            .card-info span {
-                font-weight: 700;
-            }
-            </style>
-            """, unsafe_allow_html=True)
-            figVolontariScatter = go.Figure()
-            figVolontariScatter.add_trace(
-                go.Scatter(
-                    x=df_volontari_mercato_corrente["DATA"],
-                    y=df_volontari_mercato_corrente[mercato + "_x"],
-                    name=f"KG - {mercato}",
-                    yaxis="y1",
-                    mode="lines",
-                    hovertext=f"KG - {mercato}",
-                    hovertemplate="Data: %{x}<br>Kg " + mercato + ": %{y}<extra></extra>"
-                )
-            )
-            figVolontariScatter.add_trace(
-                go.Scatter(
-                    x=df_volontari_mercato_corrente["DATA"],
-                    y=df_volontari_mercato_corrente[mercato + "_y"],
-                    name=f"Volontari - {mercato}",
-                    yaxis="y2",
-                    mode="lines",
-                    hovertext=f"Volontari - {mercato}",
-                    hovertemplate="Data: %{x}<br>Kg " + mercato + ": %{y}<extra></extra>"
-                )
-            )
-            figVolontariScatter.update_layout(
-                xaxis=dict(title="Data"),
-                yaxis=dict(
-                    title="Kg",
-                    side="left"
-                ),
-                title="♻️ Cibo recuperato e partecipazione dei volontari",
-                yaxis2=dict(
-                    title="Numero Volontari",
-                    overlaying="y",
-                    side="right"
-                ),
-                legend=dict(x=0.01, y=0.99),
-                title_x=0.5,
-                title_xanchor="center",
-                title_font_size=20,
-            )
-            figVolontariScatter.add_annotation(
-                x=0.95,
-                y=0.99,
-                xref="paper",
-                yref="paper",
-                text=f"Correlazione: {corr}",
-                showarrow=False,
-                font=dict(size=16, color=color),
-            )
-            st.plotly_chart(figVolontariScatter, use_container_width=True, theme=None)
 
 
