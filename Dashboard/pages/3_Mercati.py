@@ -83,7 +83,8 @@ giornate_di_mercato = {
     "PAPINIANO" : 5,
     "BENEDETTO MARCELLO" : 5,
     "PADERNO DUGNANO" : 2,
-    "ESTERLE": 5
+    "ESTERLE": 5,
+    "ARESE": 2
 }
 
 
