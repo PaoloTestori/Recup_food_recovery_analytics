@@ -3,17 +3,17 @@ from sklearn.metrics import r2_score
 import pandas as pd
 import streamlit as st
 import plotly.graph_objects as go
-from plotly.subplots import make_subplots
 import importlib.util
 import os
 
+# ─── import componenti/utils (pattern importlib esistente nel progetto) ──────
 spec = importlib.util.spec_from_file_location(
     "filters",
     os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'components', 'filters.py'))
 )
 filters = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(filters)
-render_filter_anno = filters.render_filter_anno
+#render_filter_anno = filters.render_filter_anno
 get_filter_anno = filters.get_filter_anno
 
 spec = importlib.util.spec_from_file_location(
@@ -24,426 +24,242 @@ Anno = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(Anno)
 filtra_df_anno = Anno.filtra_df
 
-st.set_page_config(page_title="Mercati Milano",
-                   page_icon="📍",
-                   layout="wide")
+spec_dl = importlib.util.spec_from_file_location(
+    "data_loader",
+    os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'components', 'data_loader.py'))
+)
+data_loader = importlib.util.module_from_spec(spec_dl)
+spec_dl.loader.exec_module(data_loader)
+GIORNATE_DI_MERCATO = data_loader.GIORNATE_DI_MERCATO
 
-df = st.session_state["df"].copy()
+spec_st = importlib.util.spec_from_file_location(
+    "styles",
+    os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'components', 'styles.py'))
+)
+styles = importlib.util.module_from_spec(spec_st)
+spec_st.loader.exec_module(styles)
+inietta_css = styles.inietta_css
+
+# ─────────────────────────────────────────────────────────────────────────────
+st.set_page_config(page_title="Mercati Milano", page_icon="📍", layout="wide")
+inietta_css()
+
+data = data_loader.load_all()
+df = data["df"].copy()
+dizionarioVolontari = data["dizionarioVolontari"]
+dizionarioBeneficiari = data["dizionarioBeneficiari"]
 anni_disponibili = df["ANNO"].unique().astype(int).tolist()
-df_Form = st.session_state["df_Form"].copy()
-dizionarioVolontari = st.session_state["dizionarioVolontari"].copy()
-dizionarioBeneficiari = st.session_state["dizionarioBeneficiari"].copy()
-if "anno" not in st.session_state:
-    st.session_state["Anno_selezionato"] = 2026
-else:
-    Anno_selezionato = st.session_state["Anno_selezionato"]
-#filtri
-render_filter_anno(anni_disponibili)
+
+
+# filtro anno
+#render_filter_anno(anni_disponibili)
 filtroAnno = get_filter_anno()
 df = filtra_df_anno(df, filtroAnno)
+Anno_selezionato = str(filtroAnno["ANNO"])
 
 st.markdown(f"""
 <h1 style='margin-bottom:0;'>📅 Anno {filtroAnno["ANNO"]}</h1>
 """, unsafe_allow_html=True)
+
+
+# ─── volontari/beneficiari dai dizionari centralizzati (vettoriale) ──────────
+df["DATA"] = pd.to_datetime(df["DATA"], format="mixed", dayfirst=True, errors="coerce")
+chiave = df["MERCATO"].str.upper() + "_" + df["DATA"].dt.strftime("%d/%m/%Y")
+df["Numero Volontari"] = chiave.map(dizionarioVolontari).fillna(0).astype(int)
+df["Numero Beneficiari"] = chiave.map(dizionarioBeneficiari).fillna(0).astype(int)  # BUG FIX: era dizionarioVolontari
+
+# ─── pivot KG per (DATA × MERCATO), una volta sola ───────────────────────────
+df_pivot = (
+    df.drop(columns=["ANNO", "MESE"], errors="ignore")
+      .groupby(by=["MERCATO", "DATA"]).sum(numeric_only=True)[["KG"]]
+      .reset_index()
+      .pivot(index="DATA", columns="MERCATO", values="KG")
+      .fillna(0)
+      .reset_index()
+)
+
+# ─── media e std settimanale tra mercati, calcolate UNA volta (non nel loop) ──
+base_sett = df.copy()
+base_sett["SETTIMANA"] = base_sett["DATA"].dt.to_period("W").dt.start_time
+base_sett = base_sett.groupby(["SETTIMANA", "MERCATO"])["KG"].sum().reset_index()
+df_media_mercati = base_sett.groupby("SETTIMANA")["KG"].mean().reset_index()
+df_std_mercati = base_sett.groupby("SETTIMANA")["KG"].std().fillna(0).reset_index()
+
+# ─── elenco mercati disponibili (esclusa la colonna DATA) ────────────────────
+mercati_disponibili = sorted([c for c in df_pivot.columns if c != "DATA"])
+
+# ═════════════════════════════════════════════════════════════════════════════
+mercato = st.selectbox("🏘️ Scegli il mercato", mercati_disponibili)
+
+# giorno della settimana del mercato (default 5 = venerdì se non mappato)
+giorno_mercato = GIORNATE_DI_MERCATO.get(mercato, 5)
+
+# serie del mercato selezionato, solo nei giorni in cui si tiene davvero
+df_mercato = df_pivot[df_pivot["DATA"].dt.weekday == giorno_mercato]
+serie = df_mercato[mercato]
+serie_nonzero = serie[serie != 0]
+total = round(float(df[df["MERCATO"] == mercato]["KG"].sum()), 2)
 tabconfronti, tabanalisitemporali = st.tabs(["Andamento Mercati", "Analisi Temporali"])
-st.markdown("""
-<style>
-button[data-baseweb="tab"] {
-    font-size: 16px;
-    padding: 10px 24px;
-    border-radius: 10px;
-    background-color: #1f1f1f;
-    color: #aaa;
-}
-button[data-baseweb="tab"]:hover {
-    background-color: #333;
-    color: white;
-}
-button[data-baseweb="tab"][aria-selected="true"] {
-    background: linear-gradient(90deg,#ff4b4b,#ff914d);
-    color: white;
-    font-weight: bold;
-}
-</style>
-""", unsafe_allow_html=True)
-
-st.sidebar.text("Made with ❤ by Recup")
-
-giornate_di_mercato = {
-    "MOMPIANI" : 1,
-    "MARTINI" : 2,
-    "TERMOPILI" : 4,
-    "CATONE" : 4,
-    "GRAMSCI - SAN DONATO" : 4,
-    "GRAMSCI" : 4,
-    "OGLIO" : 5,
-    "VALVASSORI PERONI" : 5,
-    "TABACCHI" : 5,
-    "OSOPPO" : 5,
-    "PAPINIANO" : 5,
-    "BENEDETTO MARCELLO" : 5,
-    "PADERNO DUGNANO" : 2,
-    "ESTERLE": 5,
-    "ARESE": 2
-}
 
 
-df_Form["Data del Mercato"] = pd.to_datetime(df_Form["Data del Mercato"], dayfirst=True, errors="coerce")
-df_form_2025 = df_Form[df_Form["Data del Mercato"].dt.year.isin([2024, 2025])]
-df_form_2025 = df_form_2025.reset_index(drop=True)
-df_form_2025["Inserisci NOME e COGNOME dellə volontariə presenti"] = df_form_2025["Inserisci NOME e COGNOME dellə volontariə presenti"].str.replace(";", ",").str.replace(".", ",").str.replace("-",",").str.replace("/",",").str.replace(" e ",",")
-df_form_2025["Numero volontari"] = 0
-df_form_2025["Quantə beneficiariə? (inserisci un numero)"] = df_form_2025["Quantə beneficiariə? (inserisci un numero)"].replace("-",0)
-idx = 0
-df["DATA"] = pd.to_datetime(df["DATA"],  format="mixed", dayfirst=True, errors="coerce")
-df["Numero Volontari"] = 0
-df["Numero Beneficiari"] = 0
-for idx, row in df.iterrows():
-    chiave = str.upper(df["MERCATO"][idx]) + "_" + df["DATA"][idx].strftime("%d/%m/%Y")
-    if chiave in dizionarioVolontari:
-        df["Numero Volontari"][idx] = dizionarioVolontari[str.upper(df["MERCATO"][idx]) + "_" + df["DATA"][idx].strftime("%d/%m/%Y")]
-    else:
-        df["Numero Volontari"][idx] = 0
-    if chiave in dizionarioBeneficiari:
-        df["Numero Beneficiari"][idx] = dizionarioVolontari[str.upper(df["MERCATO"][idx]) + "_" + df["DATA"][idx].strftime("%d/%m/%Y")]
-    else:
-        df["Numero Beneficiari"][idx] = 0
 
-idx = 0
-
-df_media_mercati_2025 = df
-df_media_mercati_2025["SETTIMANA"] = df_media_mercati_2025["DATA"].dt.to_period("W").dt.start_time
-df_media_mercati_2025 = (
-    (df_media_mercati_2025.groupby(["SETTIMANA", "MERCATO"])["KG"].sum().reset_index()).groupby("SETTIMANA")[
-        "KG"].mean()).reset_index()
-df = df.drop(columns=["SETTIMANA"])
-df_std_mercati_2025 = df
-df_std_mercati_2025["SETTIMANA"] = df_std_mercati_2025["DATA"].dt.to_period("W").dt.start_time
-df_std_mercati_2025 = (
-    (df_std_mercati_2025.groupby(["SETTIMANA", "MERCATO"])["KG"].sum().reset_index()).groupby("SETTIMANA")[
-        "KG"].std()).reset_index()
-df = df.drop(columns=["SETTIMANA"])
-
-df_selection = df
-df["Numero volontari"] = df["NUMERO VOLONTARI"]
-
-df_volontari_mercato_selezionato = (
-    df.groupby(by=["MERCATO", "DATA"])
-    .first()[["Numero Volontari"]]
-    .reset_index()
-    .pivot(index="DATA", columns="MERCATO", values="Numero Volontari")
-    .fillna(0)
-)
-df_beneficiari_mercato_selezionato = (
-    df.groupby(by=["MERCATO", "DATA"])
-    .first()[["Numero Beneficiari"]]
-    .reset_index()
-    .pivot(index="DATA", columns="MERCATO", values="Numero Beneficiari")
-    .fillna(0)
-)
-
+# ═══════════════════════════════ TAB 1 — ANDAMENTO ══════════════════════════
 with tabconfronti:
-    df_grafico_mercato_selezionato = (
-        df.drop(columns=["ANNO", "MESE"]).groupby(by=["MERCATO", "DATA"])
-        .sum()[["KG"]]
-        .reset_index()
-        .pivot(index="DATA", columns="MERCATO", values="KG")
-        .fillna(0)
-    )
-    df_grafico_mercato_selezionato = df_grafico_mercato_selezionato.reset_index()
-    df_grafico_mercato_selezionato_raggruppato = df_grafico_mercato_selezionato.replace(0, pd.NA)
-    df_grafico_mercato_selezionato_raggruppato["SETTIMANA"] = df_grafico_mercato_selezionato_raggruppato["DATA"].dt.to_period("W").dt.start_time
-    df_grafico_mercato_selezionato_raggruppato = df_grafico_mercato_selezionato_raggruppato.groupby("SETTIMANA").first().reset_index()
-    df_grafico_mercato_selezionato_raggruppato = df_grafico_mercato_selezionato_raggruppato.fillna(0)
-    df_grafico_mercato_selezionato_raggruppato_drop = df_grafico_mercato_selezionato_raggruppato.drop(columns=["DATA"])
-    with tabconfronti:
-        for mercato in df_grafico_mercato_selezionato.columns:
-            if mercato != "DATA":
-                df_std_mercati_2025 = df_grafico_mercato_selezionato_raggruppato_drop.set_index("SETTIMANA").std(
-                    axis=1).reset_index()
-                df_media_mercati_2025 = df
-                df_media_mercati_2025["SETTIMANA"] = df_media_mercati_2025["DATA"].dt.to_period("W").dt.start_time
-                df_media_mercati_2025 = (
-                    (df_media_mercati_2025.groupby(["SETTIMANA", "MERCATO"])["KG"].sum().reset_index()).groupby(
-                        "SETTIMANA")[
-                        "KG"].mean()).reset_index()
-                df = df.drop(columns=["SETTIMANA"])
-                df_std_mercati_2025 = df
-                df_std_mercati_2025["SETTIMANA"] = df_std_mercati_2025["DATA"].dt.to_period("W").dt.start_time
-                df_std_mercati_2025 = (
-                    (df_std_mercati_2025.groupby(["SETTIMANA", "MERCATO"])["KG"].sum().reset_index()).groupby(
-                        "SETTIMANA")[
-                        "KG"].std()).reset_index()
-                df = df.drop(columns=["SETTIMANA"])
-                total_df = df.groupby("MERCATO")["KG"].sum().reset_index()
-                total_dict = dict(zip(total_df["MERCATO"], total_df["KG"]))
-                total =round(float(total_dict[mercato]), 2)
-                fig = go.Figure()
-                df_media_mercati_2025["SETTIMANA"] += pd.Timedelta(days=giornate_di_mercato[mercato])
-                df_std_mercati_2025["SETTIMANA"] += pd.Timedelta(days=giornate_di_mercato[mercato])
-                df_grafico_mercato_selezionato_filtrato = df_grafico_mercato_selezionato[df_grafico_mercato_selezionato["DATA"].dt.weekday == giornate_di_mercato[mercato]]
-                media = round(float(df_grafico_mercato_selezionato_filtrato[mercato][df_grafico_mercato_selezionato_filtrato[mercato] != 0].mean()), 2)
-                max_mercato = df_grafico_mercato_selezionato_filtrato[mercato].max()
-                giorno_max_mercato = (df_grafico_mercato_selezionato_filtrato["DATA"][df_grafico_mercato_selezionato_filtrato[mercato].idxmax()]).date().strftime("%d/%m/%Y")
-                df_scostamento = df_grafico_mercato_selezionato_filtrato.merge(df_media_mercati_2025[["SETTIMANA", "KG"]], left_on="DATA", right_on="SETTIMANA", how="left")
-                df_scostamento["Scostamento"] = ((df_scostamento[mercato]-df_scostamento["KG"])/df_scostamento["KG"])*100
-                df_scostamento = df_scostamento.merge(df_std_mercati_2025[["SETTIMANA", "KG"]], left_on="DATA", right_on="SETTIMANA", how="left")
-                df_scostamento["Zscore"] = (df_scostamento[mercato]-df_scostamento["KG_x"])/df_scostamento["KG_y"]
-                df_std_mercati_2025["Upper"] = (df_media_mercati_2025["KG"] + df_std_mercati_2025["KG"]).fillna(0).interpolate(method="linear")
-                df_std_mercati_2025["Lower"] = df_media_mercati_2025["KG"] - df_std_mercati_2025["KG"]
 
-                st.markdown("""
-                <style>
-                    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700&family=Space+Grotesk:wght@700&display=swap');
-                    .kpi-card {
-                        background: linear-gradient(135deg, #0d1f1a 0%, #0a1a14 100%);
-                        border: 1px solid #1a3a2a;
-                        padding: 1.2rem 2rem;
-                        border-radius: 16px;
-                        text-align: center;
-                        max-width: 680px;
-                        font-family: 'DM Sans', sans-serif;
-                    }
-                    .kpi-title {
-                        color: #8a9ba8;
-                        font-size: 1rem;         
-                        letter-spacing: 0.1em;
-                        text-transform: uppercase;
-                        margin-bottom: 0.3rem;
-                        font-family: 'DM Sans', sans-serif;
-                        font-weight: 400;
+    if len(serie_nonzero) == 0:
+        st.info(f"Nessun dato disponibile per **{mercato}** nell'anno selezionato.")
+    else:
+        max_mercato = serie.max()
+        giorno_max = df_mercato["DATA"][serie.idxmax()].date().strftime("%d/%m/%Y")
 
-                    }
-                    .kpi-value {
-                        color: #ffea00;
-                        font-size: 1.5rem;
-                        font-weight: 700;
-                        line-height: 1;
-                        font-family: 'Space Grotesk', sans-serif;
-                    }
-                    .kpi-icon {
-                        font-size: 2rem;
-                        line-height: 1;
-                        margin-bottom: 0.3rem;
-                    }
-                .header-title {
-                    font-size: 42px;
-                    font-weight: 700;
-                }
-                .header-subtitle {
-                    font-size: 18px;
-                    color: #bbbbbb;
-                }
-                </style>
-                """, unsafe_allow_html=True)
-                # ===== HEADER =====
-                st.markdown(f"""
-                <div style="margin-bottom:20px;">
-                  <div class="header-title">📍 {mercato}</div>
-                </div>
-                """, unsafe_allow_html=True)
+        # scostamento % medio del mercato rispetto alla media mercati
+        df_scost = df_mercato.copy()
+        # riporta la data del mercato all'inizio settimana (lunedì), come df_media_mercati
+        df_scost["SETTIMANA"] = df_scost["DATA"].dt.to_period("W").dt.start_time
+        df_scost = df_scost.merge(
+            df_media_mercati, on="SETTIMANA", how="left", suffixes=("", "_media")
+        )
 
-                # ===== KPI ROW =====
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    st.markdown(f"""
-                    <div class="kpi-card">
-                        <div class="kpi-title">🌱 Totale recuperato</div>
-                        <div class="kpi-value">{total} kg</div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                with col2:
-                    st.markdown(f"""
-                    <div class="kpi-card">
-                        <div class="kpi-title">📈 Giorno record</div>
-                        <div class="kpi-value">{giorno_max_mercato}</div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                with col3:
-                    st.markdown(f"""
-                    <div class="kpi-card">
-                        <div class="kpi-title">🔥 Kg nel giorno record</div>
-                        <div class="kpi-value">{max_mercato}</div>
-                    </div>
-                    """, unsafe_allow_html=True)
+        # serie del mercato = df_scost[mercato]; media mercati = df_scost["KG"]
+        mask = df_scost[mercato] != 0  # solo i giorni in cui il mercato c'è stato
+        with np.errstate(divide="ignore", invalid="ignore"):
+            scost_pct = ((df_scost[mercato] - df_scost["KG"]) / df_scost["KG"]) * 100
+        scost_pct = scost_pct[mask].replace([np.inf, -np.inf], np.nan).dropna()
+        scost_medio = round(float(scost_pct.mean()), 0) if not scost_pct.empty else 0
 
-                figSubplot = make_subplots(
-                    rows=2, cols=1,
-                    shared_xaxes=True,
-                    vertical_spacing=0.08,
-                    subplot_titles=("", "Z-score (scostamento standardizzato)")
-                )
-                # --- PANNELLO 1 ---
-                figSubplot.add_trace(
-                    go.Scatter(
-                        x=df_grafico_mercato_selezionato_filtrato["DATA"],
-                        y=df_grafico_mercato_selezionato_filtrato[mercato],
-                        name=f"KG - {mercato}",
-                        mode="lines",
-                        hovertext=f"KG - {mercato}",
-                        hovertemplate="Data: %{x}<br>Kg " + mercato + ": %{y}<extra></extra>"
-                    ),
-                    row=1, col=1
-                )
-                figSubplot.add_trace(
-                    go.Scatter(
-                        x=df_media_mercati_2025["SETTIMANA"],
-                        y=df_media_mercati_2025["KG"],
-                        name="Media Mercati",
-                        mode="lines",
-                        hovertext="Media Mercati",
-                        hovertemplate="Data: %{x}<br>Kg medi: %{y}<extra></extra>",
-                        line=dict(
-                            dash="dot"
-                        )
-                    ),
-                    row=1, col=1
-                )
-                # --- PANNELLO 2 (Z-SCORE) ---
-                figSubplot.add_trace(
-                    go.Scatter(
-                        x=df_scostamento["SETTIMANA_x"],
-                        y=df_scostamento["Zscore"],
-                        connectgaps=True,
-                        mode="lines+markers",
-                        name="Z-score",
-                        line=dict(color="orange")
-                    ),
-                    row=2, col=1
-                )
-                # linee soglia ±2
-                figSubplot.add_hline(y=2, line_dash="dash", line_color="red", row=2, col=1)
-                figSubplot.add_hline(y=-2, line_dash="dash", line_color="red", row=2, col=1)
-                figSubplot.add_hline(y=0, line_dash="dot", line_color="gray", row=2, col=1)
-                figSubplot.update_layout(
-                    height=700,
-                    hovermode="x unified",
-                    title="📊 Andamento kg recuperati vs media mercati",
-                    template="plotly_dark",
-                    title_font_size=18,
-                    title_x=0.45,
-                    title_xanchor="center"
-                )
-                figSubplot.update_yaxes(title_text="Kg", row=1, col=1)
-                figSubplot.update_yaxes(title_text="Z-score", row=2, col=1)
-                figSubplot.update_xaxes(title_text="Data", row=2, col=1)
-                st.plotly_chart(figSubplot, use_container_width=True)
+        # ===== HEADER =====
+        # ===== KPI ROW =====
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.markdown(f"""
+            <div class="kpi-card">
+                <div class="kpi-title">🌱 Totale recuperato</div>
+                <div class="kpi-value">{total} kg</div>
+            </div>
+            """, unsafe_allow_html=True)
+        with col2:
+            st.markdown(f"""
+            <div class="kpi-card">
+                <div class="kpi-title">📈 Giorno record</div>
+                <div class="kpi-value" style="font-size:1.8rem;">{giorno_max}</div>
+            </div>
+            """, unsafe_allow_html=True)
+        with col3:
+            st.markdown(f"""
+            <div class="kpi-card">
+                <div class="kpi-title">🔥 Kg nel giorno record</div>
+                <div class="kpi-value">{max_mercato}</div>
+            </div>
+            """, unsafe_allow_html=True)
 
-    with tabanalisitemporali:
-        for mercato in df_grafico_mercato_selezionato.columns:
-            if mercato != "DATA" and mercato != "PADERNO DUGNANO":
-                fig = go.Figure()
-                df_grafico_mercato_selezionato_filtrato = df_grafico_mercato_selezionato[df_grafico_mercato_selezionato["DATA"].dt.weekday == giornate_di_mercato[mercato]]
-                df_trend = df_grafico_mercato_selezionato_filtrato[df_grafico_mercato_selezionato_filtrato[mercato] != 0].set_index("DATA").rolling(4).mean().reset_index().dropna()
-                df_slope = df_trend.sort_values("DATA")
-                x = np.arange(len(df_slope.index))
-                y = df_slope[mercato].values
-                slope, intercept = np.polyfit(x, y, 1)
-                trend = slope*x + intercept
-                r2 = round(r2_score(y, trend), 2)
-                media = round(float(df_grafico_mercato_selezionato_filtrato[mercato][df_grafico_mercato_selezionato_filtrato[mercato] != 0].mean()), 2)
-                st.markdown("""
-                <style>
-                .header-title {
-                    font-size: 42px;
-                    font-weight: 700;
-                }
-                .header-subtitle {
-                    font-size: 18px;
-                    color: #bbbbbb;
-                }
-                </style>
-                """, unsafe_allow_html=True)
-                # ===== HEADER =====
-                st.markdown(f"""
-                <div style="margin-bottom:20px;">
-                  <div class="header-title">📍 {mercato}</div>
-                </div>
-                """, unsafe_allow_html=True)
-                # ===== KPI ROW =====
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    st.markdown(f"""
-                    <div class="kpi-card">
-                        <div class="kpi-title">🌱 Media per giornata di mercato</div>
-                        <div class="kpi-value">{media} kg</div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                with col2:
-                    st.markdown("""
-                    <div class="kpi-card">
-                        <div class="kpi-title">📈 Trend settimanale</div>
-                        <div class="kpi-value">+34 kg / settimana</div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                with col3:
-                    st.markdown(f"""
-                    <div class="kpi-card">
-                        <div class="kpi-title">📊 Affidabilità trend (R²)</div>
-                        <div class="kpi-value">{r2}</div>
-                    </div>
-                    """, unsafe_allow_html=True)
+        # ===== GRAFICO SINGOLO: KG mercato vs media mercati (niente più Z-score) =====
+        # allinea la media al giorno del mercato
+        media_shift = df_media_mercati.copy()
+        media_shift["SETTIMANA"] = media_shift["SETTIMANA"] + pd.Timedelta(days=giorno_mercato)
 
-                fig.add_trace(
-                    go.Scatter(
-                        x=df_trend["DATA"],
-                        y=df_trend[mercato],
-                        mode="lines",
-                        hovertext=f"Media Mobile - {mercato}",
-                        name=f"Media Mobile - {mercato}",
-                        line=dict(
-                            width=2,
-                            color="rgb(255,209,102)",
-                        ),
-                        opacity=1
-                    )
-                )
-                color = " rgb(60,179,113)" if slope > 0 else "rgb(230,57,70)"
-                fig.add_trace(
-                    go.Scatter(
-                        x=df_trend["DATA"],
-                        y=trend,
-                        mode="lines",
-                        hovertext=f"Trend - {mercato}",
-                        name=f"Trend - {mercato}",
-                        line=dict(
-                            dash="dash",
-                            width=1,
-                            color=color
-                        )
-                    )
-                )
-                fig.update_layout(
-                    title="📈 Andamento del recupero nel tempo",
-                    xaxis=dict(title="DATA"),
-                    yaxis=dict(title="KG"),
-                    legend=dict(orientation="h", y=-0.3),
-                    title_x=0.5,
-                    title_xanchor="center",
-                    title_font_size=20,  # rimpicciolisce il titolo (prova 16–20)
-                )
-                color = "rgba(60,179,113,0.9)" if slope > 0 else "rgba(230,57,70,0.9)"
-                fig.add_annotation(
-                    x=0.02,
-                    y=0.95,
-                    xref="paper",
-                    yref="paper",
-                    text=f"Trend: {slope * 5:+.0f} kg/settimana",
-                    showarrow=False,
-                    font=dict(size=16, color=color),
-                )
-                fig.add_annotation(
-                    x=0.02,
-                    y=0.86,
-                    xref="paper",
-                    yref="paper",
-                    text=f"R² = {r2:.2f}",
-                    showarrow=False,
-                    font=dict(size=14, color="white"),
-                    bgcolor="rgba(0,0,0,0.5)",
-                    borderwidth=1
-                )
-                st.plotly_chart(fig, use_container_width=True)
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(
+            x=df_mercato["DATA"], y=serie,
+            name=f"KG - {mercato}", mode="lines",
+            hovertemplate="Data: %{x}<br>Kg " + mercato + ": %{y}<extra></extra>",
+        ))
+        fig.add_trace(go.Scatter(
+            x=media_shift["SETTIMANA"], y=media_shift["KG"],
+            name="Media Mercati", mode="lines", line=dict(dash="dot"),
+            hovertemplate="Data: %{x}<br>Kg medi: %{y}<extra></extra>",
+        ))
+        fig.update_layout(
+            height=480,
+            hovermode="x unified",
+            title="📊 Andamento kg recuperati vs media mercati",
+            template="plotly_dark",
+            xaxis=dict(title="Data"), yaxis=dict(title="Kg"),
+            legend=dict(orientation="h", y=-0.3),
+            title_font_size=18, title_x=0.45, title_xanchor="center",
+        )
+        # scostamento % come annotazione leggibile (al posto del pannello Z-score)
+        col_scost = "rgba(60,179,113,0.9)" if scost_medio >= 0 else "rgba(230,57,70,0.9)"
+        fig.add_annotation(
+            x=0.02, y=0.95, xref="paper", yref="paper",
+            text=f"Scostamento medio dalla media mercati: {scost_medio:+.0f}%",
+            showarrow=False, font=dict(size=15, color=col_scost),
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+# ═══════════════════════════════ TAB 2 — ANALISI TEMPORALI ══════════════════
+with tabanalisitemporali:
+    if len(serie_nonzero) < 4:
+        st.info(f"Dati insufficienti per calcolare un trend affidabile per **{mercato}**.")
+    else:
+        # media mobile + trend lineare sui soli giorni di mercato con dato
+        df_trend = (
+            df_mercato[df_mercato[mercato] != 0]
+            .set_index("DATA").rolling(4).mean().reset_index().dropna()
+        )
+        df_slope = df_trend.sort_values("DATA")
+        x = np.arange(len(df_slope.index))
+        y = df_slope[mercato].values
+        slope, intercept = np.polyfit(x, y, 1)
+        trend = slope * x + intercept
+        r2 = round(r2_score(y, trend), 2)
+        media = round(float(serie_nonzero.mean()), 2)
+
+        # ===== HEADER =====
 
 
+        # ===== KPI ROW =====
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.markdown(f"""
+            <div class="kpi-card">
+                <div class="kpi-title">🌱 Media per giornata di mercato</div>
+                <div class="kpi-value">{media} kg</div>
+            </div>
+            """, unsafe_allow_html=True)
+        with col2:
+            st.markdown(f"""
+            <div class="kpi-card">
+                <div class="kpi-title">📈 Trend settimanale</div>
+                <div class="kpi-value">{slope * 5:+.0f} kg / sett.</div>
+            </div>
+            """, unsafe_allow_html=True)  # BUG FIX: era hardcoded +34
+        with col3:
+            st.markdown(f"""
+            <div class="kpi-card">
+                <div class="kpi-title">📊 Affidabilità trend (R²)</div>
+                <div class="kpi-value">{r2}</div>
+            </div>
+            """, unsafe_allow_html=True)
 
+        # ===== GRAFICO media mobile + trend =====
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(
+            x=df_trend["DATA"], y=df_trend[mercato], mode="lines",
+            name=f"Media Mobile - {mercato}",
+            line=dict(width=2, color="rgb(255,209,102)"), opacity=1,
+        ))
+        color = "rgb(60,179,113)" if slope > 0 else "rgb(230,57,70)"
+        fig.add_trace(go.Scatter(
+            x=df_trend["DATA"], y=trend, mode="lines",
+            name=f"Trend - {mercato}",
+            line=dict(dash="dash", width=1, color=color),
+        ))
+        fig.update_layout(
+            title="📈 Andamento del recupero nel tempo",
+            xaxis=dict(title="DATA"), yaxis=dict(title="KG"),
+            legend=dict(orientation="h", y=-0.3),
+            title_x=0.5, title_xanchor="center", title_font_size=20,
+        )
+        col_ann = "rgba(60,179,113,0.9)" if slope > 0 else "rgba(230,57,70,0.9)"
+        fig.add_annotation(
+            x=0.02, y=0.95, xref="paper", yref="paper",
+            text=f"Trend: {slope * 5:+.0f} kg/settimana",
+            showarrow=False, font=dict(size=16, color=col_ann),
+        )
+        fig.add_annotation(
+            x=0.02, y=0.86, xref="paper", yref="paper",
+            text=f"R² = {r2:.2f}", showarrow=False,
+            font=dict(size=14, color="white"),
+            bgcolor="rgba(0,0,0,0.5)", borderwidth=1,
+        )
+        st.plotly_chart(fig, use_container_width=True)

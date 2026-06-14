@@ -42,22 +42,35 @@ def render_filter_anno(anni: list):
 
 def render_filter_mese():
     init_filter_mese()
-
+    st.sidebar.markdown('<div class="recup-filtro-label">🗓️ Mese</div>',
+                        unsafe_allow_html=True)
     mese = st.sidebar.selectbox(
         "Mese",
         MESI,
-        index=MESI.index(st.session_state["MESE"])
+        index=MESI.index(st.session_state["MESE"]),
+        label_visibility="collapsed",
     )
     st.session_state["MESE"] = mese
 
+
 def render_filter_data(giorni_disponibili: list) -> list:
     init_filter_data()
-
-    giorni = st.sidebar.multiselect(
+    st.sidebar.markdown('<div class="recup-filtro-label">📆 Giorni</div>',
+                        unsafe_allow_html=True)
+    opzioni = ["Tutti"] + giorni_disponibili
+    selezione = st.sidebar.multiselect(
         "Giorni",
-        giorni_disponibili,
-        default=giorni_disponibili
+        opzioni,
+        default=["Tutti"],
+        label_visibility="collapsed",
     )
+    # "Tutti" selezionato → espandi a tutti i giorni del mese
+    if "Tutti" in selezione:
+        giorni = giorni_disponibili
+    else:
+        giorni = selezione
+    st.session_state["DATA"] = giorni
+    return giorni
 
     # 🔥 aggiorna stato globale
     if "DATA" not in st.session_state:
