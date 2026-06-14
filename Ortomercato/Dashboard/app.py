@@ -62,7 +62,6 @@ def load_all_data():
     df["scarto_kg"] = df["kgIn"] - df["kgOut"]
     df["scarto_pct"] = ((df["scarto_kg"] / df["kgIn"]) * 100).round(2)
 
-    # Correzione errori kgIn
     mask = (df["kgIn"] < 2) & (df["kgOut"] > 100)
     df.loc[mask, "kgIn"] = df.loc[mask, "kgIn"] * 1000
     df["scarto_kg"] = df["kgIn"] - df["kgOut"]
@@ -72,18 +71,6 @@ def load_all_data():
 
 df = load_all_data()
 
-# --- SIDEBAR ---
-# ═════════════════════════════════════════════════════════════════════════════
-# SIDEBAR ORTOMERCATO — allineata alla dashboard Mercati rionali
-# Sostituisce il blocco "--- SIDEBAR ---" esistente in app.py dell'Ortomercato.
-#
-# Prerequisiti:
-#   1. crea la cartella assets/ accanto ad app.py
-#   2. mettici recup_logo_ortomercato.png (rinominato recup_logo.png)
-#      e recup_icon.png (lo stesso dei mercati: solo banana)
-# ═════════════════════════════════════════════════════════════════════════════
-
-# --- LOGO sopra tutto (stesso meccanismo dei mercati) ---
 BASE = os.path.dirname(os.path.abspath(__file__))
 logo_path = os.path.join(BASE, "assets", "recup_logo.png")
 icon_path = os.path.join(BASE, "assets", "recup_icon.png")
@@ -96,7 +83,6 @@ if os.path.exists(logo_path):
 
 # --- SIDEBAR ---
 with st.sidebar:
-    # CSS condiviso (stesso dei mercati rionali)
     st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Space+Grotesk:wght@700&family=Outfit:wght@600;700;800&display=swap');

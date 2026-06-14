@@ -6,14 +6,12 @@ st.set_page_config(page_title="ReCup Mercati", page_icon="🍌", layout="wide")
 
 BASE = os.path.dirname(__file__)
 
-# ─── logo sopra il menu (meccanismo nativo st.logo) ──────────────────────────
 st.logo(
     os.path.join(BASE, "assets", "recup_logo.png"),
     icon_image=os.path.join(BASE, "assets", "recup_icon.png"),
     size="large",
 )
 
-# ─── lista anni dal loader cached (per il filtro globale) ────────────────────
 spec_dl = importlib.util.spec_from_file_location(
     "data_loader",
     os.path.join(BASE, "components", "data_loader.py")
@@ -66,8 +64,6 @@ with st.sidebar:
 
 pg = st.navigation(pages, position="sidebar", expanded=True)
 
-# il sottotitolo + filtro + made with vanno DOPO la navigation,
-# così Streamlit li mette nello user-content sotto il menu
 with st.sidebar:
     st.markdown('<div class="recup-filtro-label">📅 Anno</div>', unsafe_allow_html=True)
     st.session_state["ANNO"] = st.selectbox(

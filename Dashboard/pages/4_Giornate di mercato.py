@@ -5,14 +5,12 @@ import plotly.graph_objects as go
 import importlib.util
 import os
 
-# ─── import componenti/utils (pattern importlib esistente nel progetto) ──────
 spec = importlib.util.spec_from_file_location(
     "filters",
     os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'components', 'filters.py'))
 )
 filters = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(filters)
-#render_filter_anno = filters.render_filter_anno
 get_filter_anno = filters.get_filter_anno
 render_filter_mese = filters.render_filter_mese
 get_filter_mese = filters.get_filter_mese
@@ -60,11 +58,7 @@ spec_st.loader.exec_module(styles)
 inietta_css = styles.inietta_css
 
 
-
-# ─── helper: comprime gli item marginali sotto soglia % in "Altro" ───────────
 def comprimi_altro(serie_kg, soglia_pct=1.5):
-    """serie_kg: Series index=ITEM, value=KG (ordinata desc).
-    Tiene gli item >= soglia_pct% del totale, raggruppa il resto in 'Altro'."""
     tot = serie_kg.sum()
     if tot == 0:
         out = serie_kg.reset_index()
@@ -97,7 +91,6 @@ mesario = [
 ]
 
 # ─── filtri a cascata anno → mese → giorno ───────────────────────────────────
-#render_filter_anno(anni_disponibili)
 filtroAnno = get_filter_anno()
 df = filtra_df_anno(df, filtroAnno)
 
@@ -127,7 +120,6 @@ st.markdown(f"""
 
 tabconfrontomercatigiornate, tabfocusalimentigiornate = st.tabs(["Focus Totali", "Focus Mercati"])
 
-# riporta DATA a datetime (era stato ridotto a .dt.day per il filtro giorni)
 df["DATA"] = pd.to_datetime(df["DATA ESTESA"], dayfirst=True, errors="coerce")
 
 df_selection = df
@@ -144,7 +136,6 @@ else:
     massimo_mercato = totali.idxmax()
     totale_giorno = round(df_selection["KG"].sum())
 
-    # somma volontari/beneficiari sulle coppie mercato × data
     sommavolontari, sommaBeneficiario = 0, 0
     volontari, beneficiari = False, False
     for merc in df_selection["MERCATO"].unique().tolist():

@@ -1,17 +1,4 @@
-"""
-components/palette.py
-─────────────────────
-Palette colori condivisa Recup — unica fonte di verità per entrambe le
-dashboard (Mercati rionali + Ortomercato).
 
-Colori desaturati pensati per tema scuro: su sfondo nero i colori a piena
-saturazione (#00ff9c, #ff4b4b, #ffea00) "sparano"; questi toni mantengono
-il significato semantico senza affaticare gli occhi.
-
-USO:
-    from components.palette import VERDE, ROSSO, BLU, GIALLO, GRIGIO
-    fig = px.bar(..., color_discrete_sequence=[VERDE])
-"""
 
 # ── semantici ────────────────────────────────────────────────────────────────
 VERDE  = "#2E8B57"   # positivo / crescita / kg donati   (sea green, già Ortomercato)

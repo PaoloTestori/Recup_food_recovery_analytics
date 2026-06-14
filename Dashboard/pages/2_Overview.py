@@ -8,7 +8,6 @@ import importlib.util
 import os
 from components.palette import VERDE, ROSSO, BLU, GIALLO, GRIGIO, VERDE_SOFT, ROSSO_SOFT
 
-# ─── import componenti/utils (pattern importlib esistente nel progetto) ──────
 spec = importlib.util.spec_from_file_location(
     "filters",
     os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'components', 'filters.py'))
@@ -56,7 +55,6 @@ anni_disponibili = df["ANNO"].unique().astype(int).tolist()
 
 
 # filtri
-#render_filter_anno(anni_disponibili)
 filtroAnno = get_filter_anno()
 df = filtra_df(df, filtroAnno)
 Anno_selezionato = str(filtroAnno["ANNO"])
@@ -68,7 +66,6 @@ st.markdown(f"""
 
 tab1, tab2 = st.tabs(["Mercati", "Andamenti"])
 
-# ─── volontari: niente più re-parsing, arrivano dal dizionario centralizzato ──
 df["DATA"] = pd.to_datetime(df["DATA"], format="mixed", dayfirst=True, errors="coerce")
 chiave = df["MERCATO"].str.upper() + "_" + df["DATA"].dt.strftime("%d/%m/%Y")
 df["Numero Volontari"] = chiave.map(dizionarioVolontari).fillna(0).astype(int)

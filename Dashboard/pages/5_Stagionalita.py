@@ -4,7 +4,6 @@ import streamlit as st
 import importlib.util
 import os
 
-# ─── import componenti (pattern importlib del progetto) ──────────────────────
 BASE = os.path.dirname(__file__)
 
 spec_dl = importlib.util.spec_from_file_location(
@@ -68,7 +67,6 @@ fig_mediana.update_layout(
 )
 st.plotly_chart(fig_mediana, use_container_width=True)
 
-# ─── 2. Heatmap anno × mese (il dettaglio per anno, senza intreccio di linee) ─
 pivot_plot = pivot.copy()
 pivot_plot.index = pivot_plot.index.map(MESI_BREVI)
 
@@ -83,6 +81,6 @@ fig_heatmap.update_layout(
     title_font_size=20, title_x=0.5, title_xanchor="center",
     height=380,
     xaxis=dict(categoryorder="array", categoryarray=ORDINE_BREVI),
-    yaxis=dict(autorange="reversed"),   # anni dall'alto (più vecchio) al basso
+    yaxis=dict(autorange="reversed"),
 )
 st.plotly_chart(fig_heatmap, use_container_width=True)

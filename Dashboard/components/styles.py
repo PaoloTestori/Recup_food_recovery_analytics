@@ -1,15 +1,4 @@
-"""
-components/styles.py
-────────────────────
-CSS condiviso per tutte le pagine della dashboard Mercati di strada Recup.
-Prima questi blocchi <style> erano copia-incollati identici in ogni pagina
-(tab + kpi-card + block-container). Ora vivono qui: ogni pagina chiama
-inietta_css() una volta in cima.
 
-USO:
-    from components.styles import inietta_css
-    inietta_css()
-"""
 
 import streamlit as st
 

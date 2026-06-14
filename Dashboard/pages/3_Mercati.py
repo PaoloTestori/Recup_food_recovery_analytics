@@ -6,14 +6,12 @@ import plotly.graph_objects as go
 import importlib.util
 import os
 
-# ─── import componenti/utils (pattern importlib esistente nel progetto) ──────
 spec = importlib.util.spec_from_file_location(
     "filters",
     os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'components', 'filters.py'))
 )
 filters = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(filters)
-#render_filter_anno = filters.render_filter_anno
 get_filter_anno = filters.get_filter_anno
 
 spec = importlib.util.spec_from_file_location(
@@ -52,7 +50,6 @@ anni_disponibili = df["ANNO"].unique().astype(int).tolist()
 
 
 # filtro anno
-#render_filter_anno(anni_disponibili)
 filtroAnno = get_filter_anno()
 df = filtra_df_anno(df, filtroAnno)
 Anno_selezionato = str(filtroAnno["ANNO"])
@@ -61,14 +58,11 @@ st.markdown(f"""
 <h1 style='margin-bottom:0;'>📅 Anno {filtroAnno["ANNO"]}</h1>
 """, unsafe_allow_html=True)
 
-
-# ─── volontari/beneficiari dai dizionari centralizzati (vettoriale) ──────────
 df["DATA"] = pd.to_datetime(df["DATA"], format="mixed", dayfirst=True, errors="coerce")
 chiave = df["MERCATO"].str.upper() + "_" + df["DATA"].dt.strftime("%d/%m/%Y")
 df["Numero Volontari"] = chiave.map(dizionarioVolontari).fillna(0).astype(int)
-df["Numero Beneficiari"] = chiave.map(dizionarioBeneficiari).fillna(0).astype(int)  # BUG FIX: era dizionarioVolontari
+df["Numero Beneficiari"] = chiave.map(dizionarioBeneficiari).fillna(0).astype(int)
 
-# ─── pivot KG per (DATA × MERCATO), una volta sola ───────────────────────────
 df_pivot = (
     df.drop(columns=["ANNO", "MESE"], errors="ignore")
       .groupby(by=["MERCATO", "DATA"]).sum(numeric_only=True)[["KG"]]
@@ -78,23 +72,19 @@ df_pivot = (
       .reset_index()
 )
 
-# ─── media e std settimanale tra mercati, calcolate UNA volta (non nel loop) ──
 base_sett = df.copy()
 base_sett["SETTIMANA"] = base_sett["DATA"].dt.to_period("W").dt.start_time
 base_sett = base_sett.groupby(["SETTIMANA", "MERCATO"])["KG"].sum().reset_index()
 df_media_mercati = base_sett.groupby("SETTIMANA")["KG"].mean().reset_index()
 df_std_mercati = base_sett.groupby("SETTIMANA")["KG"].std().fillna(0).reset_index()
 
-# ─── elenco mercati disponibili (esclusa la colonna DATA) ────────────────────
 mercati_disponibili = sorted([c for c in df_pivot.columns if c != "DATA"])
 
 # ═════════════════════════════════════════════════════════════════════════════
 mercato = st.selectbox("🏘️ Scegli il mercato", mercati_disponibili)
 
-# giorno della settimana del mercato (default 5 = venerdì se non mappato)
 giorno_mercato = GIORNATE_DI_MERCATO.get(mercato, 5)
 
-# serie del mercato selezionato, solo nei giorni in cui si tiene davvero
 df_mercato = df_pivot[df_pivot["DATA"].dt.weekday == giorno_mercato]
 serie = df_mercato[mercato]
 serie_nonzero = serie[serie != 0]
@@ -114,7 +104,6 @@ with tabconfronti:
 
         # scostamento % medio del mercato rispetto alla media mercati
         df_scost = df_mercato.copy()
-        # riporta la data del mercato all'inizio settimana (lunedì), come df_media_mercati
         df_scost["SETTIMANA"] = df_scost["DATA"].dt.to_period("W").dt.start_time
         df_scost = df_scost.merge(
             df_media_mercati, on="SETTIMANA", how="left", suffixes=("", "_media")
@@ -152,7 +141,6 @@ with tabconfronti:
             </div>
             """, unsafe_allow_html=True)
 
-        # ===== GRAFICO SINGOLO: KG mercato vs media mercati (niente più Z-score) =====
         # allinea la media al giorno del mercato
         media_shift = df_media_mercati.copy()
         media_shift["SETTIMANA"] = media_shift["SETTIMANA"] + pd.Timedelta(days=giorno_mercato)
@@ -177,7 +165,6 @@ with tabconfronti:
             legend=dict(orientation="h", y=-0.3),
             title_font_size=18, title_x=0.45, title_xanchor="center",
         )
-        # scostamento % come annotazione leggibile (al posto del pannello Z-score)
         col_scost = "rgba(60,179,113,0.9)" if scost_medio >= 0 else "rgba(230,57,70,0.9)"
         fig.add_annotation(
             x=0.02, y=0.95, xref="paper", yref="paper",
@@ -191,7 +178,6 @@ with tabanalisitemporali:
     if len(serie_nonzero) < 4:
         st.info(f"Dati insufficienti per calcolare un trend affidabile per **{mercato}**.")
     else:
-        # media mobile + trend lineare sui soli giorni di mercato con dato
         df_trend = (
             df_mercato[df_mercato[mercato] != 0]
             .set_index("DATA").rolling(4).mean().reset_index().dropna()

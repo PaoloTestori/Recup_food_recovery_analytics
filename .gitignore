@@ -21,14 +21,12 @@ Ortomercato/.ipynb_checkpoints/Ortomercato-checkpoint.ipynb
 Ortomercato/.ipynb_checkpoints/Ortomercato-fornitori-checkpoint.ipynb
 Ortomercato/.ipynb_checkpoints/app-checkpoint.py
 Ortomercato/Considerazioni.txt
-Ortomercato/Dashboard/app.py
 Ortomercato/Ortomercato-Analisi.ipynb
 Ortomercato/Ortomercato-Previsioni.ipynb
 Ortomercato/Ortomercato-Prodotti.ipynb
 Ortomercato/Ortomercato-analisiAmbientale.ipynb
 Ortomercato/Ortomercato-fornitori.ipynb
 Ortomercato/Ortomercato.ipynb
-Ortomercato/agent.py
 Untitled.ipynb.env
 
 .env
@@ -39,3 +37,5 @@ Ortomercato/.env
 **/.ipynb_checkpoints/
 Bring the food/
 Untitled.ipynb
+**/.streamlit/secrets.toml
+.streamlit/secrets.toml
