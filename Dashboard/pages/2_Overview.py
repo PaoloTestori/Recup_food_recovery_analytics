@@ -51,7 +51,7 @@ data = data_loader.load_all()
 df = data["df"].copy()
 dizionarioVolontari = data["dizionarioVolontari"]
 dizionarioBeneficiari = data["dizionarioBeneficiari"]
-anni_disponibili = df["ANNO"].unique().astype(int).tolist()
+anni_disponibili = df["ANNO"].dropna().unique().astype(int).tolist()
 
 
 # filtri

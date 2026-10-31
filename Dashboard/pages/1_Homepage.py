@@ -33,18 +33,8 @@ st.session_state["df_Form"]               = df_Form
 st.session_state["dizionarioVolontari"]   = dizionarioVolontari
 st.session_state["dizionarioBeneficiari"] = dizionarioBeneficiari
 
-df["ANNO"] = pd.to_datetime(df['DATA'], format='%d-%m-%Y').dt.year
-df["MESE"] = df["DATA"].dt.month.map({
-    1: "Gennaio", 2: "Febbraio", 3: "Marzo", 4: "Aprile",
-    5: "Maggio", 6: "Giugno", 7: "Luglio", 8: "Agosto",
-    9: "Settembre", 10: "Ottobre", 11: "Novembre", 12: "Dicembre"
-})
-ordine_mesi = [
-    "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
-    "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"
-]
-df["MESE"] = pd.Categorical(df["MESE"], categories=ordine_mesi, ordered=True)
-df["MESE_NUM"] = df["DATA"].dt.month
+# ANNO, MESE e MESE_NUM arrivano già pronti dal loader (ANNO come intero Int64).
+# Non vanno ricalcolati qui: ricalcolarli riportava gli anni a decimali (2023.0).
 df = df.sort_values("MESE_NUM")
 df_grafico_confronto_anni = df.groupby(["ANNO", "MESE_NUM"])["KG"].sum().reset_index()
 mercati_anni = df.groupby('ANNO')['KG'].sum().reset_index()
@@ -58,7 +48,10 @@ mercati_anni["pct_change"] = mercati_anni["KG"].pct_change() *100
 mercati_anni["pct_label"] = mercati_anni["pct_change"].apply(
     lambda x: f"{x:+.0f}%" if pd.notnull(x) else ""
 )
-mercati_anni.loc[mercati_anni["ANNO"] == "2026", "pct_label"] = "(parziale)"
+# l'ultimo anno presente è quello in corso → etichetta "(parziale)"
+# (così l'anno prossimo funziona da solo, senza riscrivere "2026" a mano)
+anno_in_corso = mercati_anni["ANNO"].max()
+mercati_anni.loc[mercati_anni["ANNO"] == anno_in_corso, "pct_label"] = "(parziale)"
 mercati_anni["arrow"] = mercati_anni["pct_change"].apply(
     lambda x: "↑" if x > 0 else ("↓" if x < 0 else "")
 )
